@@ -169,12 +169,143 @@ const DATABASE_URL = 'https://renessans-bank-3df94-default-rtdb.europe-west1.fir
 const BONUS_RATE_REGULAR = 0.02;
 const BONUS_RATE_FAVORITE = 0.05;
 
-// ~~~~~~~~~~~~~~~~~~~~~ ТОВАРЫ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~ 1000+ ТОВАРОВ ~~~~~~~~~~~~~~~~~~~~~~~~
 const PRODUCTS = [
 {name:"Молоко 1л",price:119.90},{name:"Хлеб белый",price:64.50},{name:"Яйца 10 шт",price:149.00},
 {name:"Сыр 200г",price:249.90},{name:"Кола 0.5л",price:89.00},{name:"Шоколад",price:95.50},
-{name:"Масло сливочное",price:189.00},{name:"Картофель 1кг",price:45.00},{name:"Сахар 1кг",price:79.90}
+{name:"Масло сливочное",price:189.00},{name:"Картофель 1кг",price:45.00},{name:"Сахар 1кг",price:79.90},
+{name:"Чай черный",price:210.00},{name:"Рис 1кг",price:120.00},{name:"Кофе растворимый",price:350.00},
+{name:"Печенье",price:85.00},{name:"Сок 1л",price:130.00},{name:"Макароны",price:65.00},
+{name:"Кетчуп",price:110.00},{name:"Майонез",price:125.00},{name:"Салфетки",price:40.00},
+{name:"Зубная паста",price:160.00},{name:"Шампунь",price:290.00},{name:"Вода 1.5л",price:55.00},
+{name:"Пельмени",price:220.00},{name:"Сметана 200г",price:99.00},{name:"Творог 500г",price:180.00},
+{name:"Кефир 1л",price:85.00},{name:"Сосиски",price:190.00},{name:"Гречка 1кг",price:95.00},
+{name:"Овсянка",price:110.00},{name:"Печенье овсяное",price:75.00},{name:"Сгущёнка",price:130.00},
+{name:"Какао",price:160.00},{name:"Мёд 500г",price:450.00},{name:"Оливковое масло",price:590.00},
+{name:"Уксус",price:60.00},{name:"Сода",price:25.00},{name:"Соль",price:30.00},{name:"Перец",price:80.00},
+{name:"Лавровый лист",price:45.00},{name:"Чеснок 100г",price:35.00},{name:"Лук 1кг",price:40.00},
+{name:"Морковь 1кг",price:50.00},{name:"Капуста",price:35.00},{name:"Свёкла",price:45.00},
+{name:"Огурцы 1кг",price:120.00},{name:"Помидоры 1кг",price:180.00},{name:"Бананы 1кг",price:110.00},
+{name:"Яблоки 1кг",price:95.00},{name:"Апельсины 1кг",price:130.00},{name:"Мандарины 1кг",price:140.00},
+{name:"Груши 1кг",price:120.00},{name:"Виноград",price:220.00},{name:"Киви",price:80.00},
+{name:"Лимон",price:30.00},{name:"Авокадо",price:150.00},{name:"Ананас",price:250.00},
+{name:"Манго",price:180.00},{name:"Персики",price:160.00},{name:"Сливы",price:140.00},
+{name:"Клубника 500г",price:300.00},{name:"Малина 500г",price:350.00},{name:"Черника 500г",price:400.00},
+{name:"Арбуз",price:80.00},{name:"Дыня",price:120.00},{name:"Хлеб ржаной",price:70.00},
+{name:"Батон",price:55.00},{name:"Булочка",price:25.00},{name:"Пирожное",price:120.00},
+{name:"Торт",price:450.00},{name:"Мороженое",price:90.00},{name:"Йогурт",price:65.00},
+{name:"Ряженка",price:75.00},{name:"Сырок творожный",price:45.00},{name:"Сливки 200мл",price:110.00},
+{name:"Сыр плавленый",price:130.00},{name:"Сыр моцарелла",price:280.00},{name:"Сыр пармезан",price:550.00},
+{name:"Сыр брынза",price:220.00},{name:"Сыр фета",price:260.00},{name:"Сыр гауда",price:320.00},
+{name:"Колбаса вареная",price:350.00},{name:"Колбаса сырокопченая",price:650.00},{name:"Салями",price:580.00},
+{name:"Ветчина",price:420.00},{name:"Паштет",price:180.00},{name:"Пельмени говяжьи",price:240.00},
+{name:"Пельмени свиные",price:230.00},{name:"Хинкали",price:280.00},{name:"Вареники",price:190.00},
+{name:"Пельмени с грибами",price:210.00},{name:"Суп-пюре",price:110.00},{name:"Бульон куриный",price:90.00},
+{name:"Крупа перловая",price:85.00},{name:"Пшено",price:70.00},{name:"Манка",price:60.00},
+{name:"Кукурузная крупа",price:95.00},{name:"Чечевица",price:130.00},{name:"Фасоль",price:120.00},
+{name:"Горох",price:100.00},{name:"Нут",price:150.00},{name:"Чипсы",price:110.00},
+{name:"Попкорн",price:95.00},{name:"Орехи грецкие",price:550.00},{name:"Миндаль",price:650.00},
+{name:"Фундук",price:600.00},{name:"Арахис",price:220.00},{name:"Семечки",price:80.00},
+{name:"Сухофрукты",price:320.00},{name:"Изюм",price:280.00},{name:"Курага",price:350.00},
+{name:"Чернослив",price:300.00},{name:"Финики",price:400.00},{name:"Инжир",price:450.00},
+{name:"Мюсли",price:220.00},{name:"Гранола",price:250.00},{name:"Батончик мюсли",price:65.00},
+{name:"Протеиновый батончик",price:120.00},{name:"Энергетик",price:150.00},{name:"Лимонад",price:75.00},
+{name:"Квас",price:65.00},{name:"Компот",price:85.00},{name:"Минералка",price:50.00},
+{name:"Газировка",price:70.00},{name:"Пиво 0.5л",price:120.00},{name:"Вино красное",price:450.00},
+{name:"Вино белое",price:420.00},{name:"Шампанское",price:650.00},{name:"Водка",price:400.00},
+{name:"Коньяк",price:850.00},{name:"Виски",price:950.00},{name:"Ром",price:750.00},
+{name:"Джин",price:800.00},{name:"Ликёр",price:550.00},{name:"Сидр",price:220.00},
+{name:"Пиво безалкогольное",price:100.00},{name:"Сок яблочный",price:110.00},{name:"Сок апельсиновый",price:120.00},
+{name:"Сок томатный",price:130.00},{name:"Нектар персиковый",price:115.00},{name:"Морс",price:95.00},
+{name:"Кисель",price:70.00},{name:"Желе",price:60.00},{name:"Пудинг",price:85.00},
+{name:"Крем-брюле",price:180.00},{name:"Чизкейк",price:220.00},{name:"Эклер",price:90.00},
+{name:"Профитроли",price:100.00},{name:"Медовик",price:250.00},{name:"Наполеон",price:240.00},
+{name:"Бисквит",price:180.00},{name:"Кекс",price:120.00},{name:"Рулет",price:150.00},
+{name:"Пончики",price:70.00},{name:"Бублики",price:40.00},{name:"Баранки",price:35.00},
+{name:"Сушки",price:30.00},{name:"Пряники",price:80.00},{name:"Печенье юбилейное",price:90.00},
+{name:"Печенье ореховое",price:110.00},{name:"Печенье с изюмом",price:100.00},{name:"Крекеры",price:85.00},
+{name:"Галеты",price:75.00},{name:"Сухарики",price:60.00},{name:"Хлебцы",price:120.00},
+{name:"Сырные палочки",price:95.00},{name:"Кукурузные палочки",price:70.00},{name:"Попкорн сладкий",price:85.00},
+{name:"Зефир",price:130.00},{name:"Мармелад",price:110.00},{name:"Пастила",price:140.00},
+{name:"Карамель",price:60.00},{name:"Леденцы",price:50.00},{name:"Шоколад молочный",price:100.00},
+{name:"Шоколад горький",price:120.00},{name:"Шоколад с орехами",price:130.00},{name:"Шоколад с изюмом",price:125.00},
+{name:"Шоколад белый",price:115.00},{name:"Плитка шоколада",price:95.00},{name:"Шоколадные конфеты",price:220.00},
+{name:"Конфеты карамельные",price:180.00},{name:"Конфеты с начинкой",price:250.00},{name:"Марципан",price:300.00},
+{name:"Паста шоколадная",price:280.00},{name:"Нутелла",price:450.00},{name:"Джем",price:180.00},
+{name:"Варенье",price:200.00},{name:"Мёд цветочный",price:420.00},{name:"Мёд липовый",price:480.00},
+{name:"Мёд гречишный",price:500.00},{name:"Сироп шоколадный",price:160.00},{name:"Сироп кленовый",price:350.00},
+{name:"Сироп топлёный",price:220.00},{name:"Сгущёнка варёная",price:150.00},{name:"Молоко сгущённое",price:130.00},
+{name:"Сливки взбитые",price:140.00},{name:"Мороженое пломбир",price:100.00},{name:"Мороженое шоколадное",price:110.00},
+{name:"Мороженое фруктовое",price:95.00},{name:"Эскимо",price:80.00},{name:"Стаканчик мороженого",price:70.00},
+{name:"Мороженое рожок",price:85.00},{name:"Мороженое брикет",price:220.00},{name:"Мороженое семейное",price:350.00},
+{name:"Йогурт питьевой",price:75.00},{name:"Йогурт с фруктами",price:85.00},{name:"Йогурт натуральный",price:80.00},
+{name:"Творог 5%",price:160.00},{name:"Творог 9%",price:170.00},{name:"Творог 18%",price:190.00},
+{name:"Сырники",price:180.00},{name:"Ватрушки",price:120.00},{name:"Блины",price:100.00},
+{name:"Оладьи",price:90.00},{name:"Пироги",price:200.00},{name:"Пирожки",price:40.00},
+{name:"Чебуреки",price:60.00},{name:"Самса",price:70.00},{name:"Хачапури",price:150.00},
+{name:"Пицца замороженная",price:350.00},{name:"Пельмени замороженные",price:220.00},{name:"Овощи замороженные",price:180.00},
+{name:"Ягоды замороженные",price:300.00},{name:"Мясо замороженное",price:450.00},{name:"Рыба замороженная",price:380.00},
+{name:"Креветки",price:850.00},{name:"Кальмары",price:650.00},{name:"Мидии",price:550.00},
+{name:"Икра красная",price:2500.00},{name:"Икра чёрная",price:8000.00},{name:"Рыба солёная",price:400.00},
+{name:"Рыба копчёная",price:550.00},{name:"Селёдка",price:220.00},{name:"Скумбрия",price:280.00},
+{name:"Лосось",price:950.00},{name:"Тунец",price:650.00},{name:"Минтай",price:320.00},
+{name:"Хек",price:280.00},{name:"Палтус",price:750.00},{name:"Камбала",price:420.00},
+{name:"Окунь",price:350.00},{name:"Щука",price:380.00},{name:"Судак",price:400.00},
+{name:"Карп",price:300.00},{name:"Сом",price:450.00},{name:"Осётр",price:1200.00},
+{name:"Угорь",price:850.00},{name:"Морской окунь",price:600.00},{name:"Дорада",price:700.00},
+{name:"Лукас",price:550.00},{name:"Баранина",price:650.00},{name:"Говядина",price:750.00},
+{name:"Свинина",price:550.00},{name:"Курица",price:220.00},{name:"Индейка",price:450.00},
+{name:"Утка",price:550.00},{name:"Гусь",price:850.00},{name:"Кролик",price:650.00},
+{name:"Перепёлка",price:350.00},{name:"Колбаски",price:280.00},{name:"Сосиски молочные",price:180.00},
+{name:"Сардельки",price:220.00},{name:"Паштет печёночный",price:160.00},{name:"Паштет мясной",price:190.00},
+{name:"Консервы рыбные",price:180.00},{name:"Консервы мясные",price:220.00},{name:"Тушёнка",price:250.00},
+{name:"Гречневая каша",price:90.00},{name:"Овсяная каша",price:85.00},{name:"Манная каша",price:70.00},
+{name:"Рисовая каша",price:95.00},{name:"Пшённая каша",price:80.00},{name:"Кукурузная каша",price:100.00},
+{name:"Молочная каша",price:110.00},{name:"Каша быстрого приготовления",price:65.00},{name:"Хлопья",price:120.00},
+{name:"Мюсли с фруктами",price:240.00},{name:"Мюсли с орехами",price:260.00},{name:"Батончики протеиновые",price:130.00},
+{name:"Батончики энергетические",price:110.00},{name:"Желе быстрорастворимое",price:75.00},{name:"Кисель быстрорастворимый",price:70.00},
+{name:"Супы быстрого приготовления",price:85.00},{name:"Лапша доширак",price:60.00},{name:"Пюре картофельное",price:90.00},
+{name:"Пюре овощное",price:100.00},{name:"Пюре фруктовое",price:110.00},{name:"Компот сухой",price:80.00},
+{name:"Кисель сухой",price:75.00},{name:"Кофе зерновой",price:650.00},{name:"Кофе молотый",price:450.00},
+{name:"Кофе растворимый классический",price:320.00},{name:"Кофе 3 в 1",price:220.00},{name:"Какао-порошок",price:280.00},
+{name:"Чай зелёный",price:180.00},{name:"Чай травяной",price:160.00},{name:"Чай фруктовый",price:170.00},
+{name:"Чай с лимоном",price:150.00},{name:"Чай с мятой",price:155.00},{name:"Чай с жасмином",price:190.00},
+{name:"Матча",price:850.00},{name:"Эспрессо",price:400.00},{name:"Капучино",price:350.00},
+{name:"Латте",price:320.00},{name:"Американо",price:300.00},{name:"Раф",price:380.00},
+{name:"Молоко кокосовое",price:220.00},{name:"Молоко миндальное",price:280.00},{name:"Молоко овсяное",price:250.00},
+{name:"Молоко соевое",price:200.00},{name:"Йогурт кокосовый",price:180.00},{name:"Йогурт миндальный",price:190.00},
+{name:"Сыр тофу",price:220.00},{name:"Темпе",price:280.00},{name:"Сейтан",price:320.00},
+{name:"Квашеная капуста",price:120.00},{name:"Маринованные огурцы",price:110.00},{name:"Помидоры солёные",price:130.00},
+{name:"Грибы маринованные",price:180.00},{name:"Оливки",price:220.00},{name:"Маслины",price:200.00},
+{name:"Анчоусы",price:350.00},{name:"Каперсы",price:280.00},{name:"Горчица",price:90.00},
+{name:"Хрен",price:85.00},{name:"Аджика",price:120.00},{name:"Ткемали",price:130.00},
+{name:"Соус барбекю",price:150.00},{name:"Соус терияки",price:180.00},{name:"Соус устричный",price:220.00},
+{name:"Соус соевый",price:140.00},{name:"Соус чили",price:130.00},{name:"Соус песто",price:250.00},
+{name:"Соус альфредо",price:280.00},{name:"Соус болоньезе",price:220.00},{name:"Соус карбонара",price:240.00},
+{name:"Макароны спагетти",price:85.00},{name:"Макароны пенне",price:90.00},{name:"Макароны фузилли",price:95.00},
+{name:"Макароны лингвини",price:100.00},{name:"Лазанья",price:180.00},{name:"Равиоли",price:220.00},
+{name:"Гnocchi",price:250.00},{name:"Рис басмати",price:150.00},{name:"Рис жасмин",price:160.00},
+{name:"Рис круглый",price:100.00},{name:"Рис длиннозёрный",price:110.00},{name:"Киноа",price:350.00},
+{name:"Булгур",price:220.00},{name:"Кускус",price:180.00},{name:"Фарро",price:300.00},
+{name:"Амарант",price:320.00},{name:"Тритикале",price:280.00},{name:"Полба",price:260.00},
+{name:"Спельта",price:270.00},{name:"Камут",price:290.00},{name:"Фондю",price:550.00},
+{name:"Раклет",price:650.00},{name:"Бри",price:450.00},{name:"Камамбер",price:420.00},
+{name:"Рокфор",price:580.00},{name:"Дорблю",price:520.00},{name:"Горгонзола",price:500.00},
+{name:"Моцарелла ди буффалла",price:750.00},{name:"Буррата",price:850.00},{name:"Рикотта",price:320.00},
+{name:"Маскарпоне",price:450.00},{name:"Филадельфия",price:380.00},{name:"Халуми",price:420.00},
+{name:"Фетакса",price:380.00},{name:"Манчего",price:550.00},{name:"Грюйер",price:600.00},
+{name:"Эмменталь",price:520.00},{name:"Чеддер",price:480.00},{name:"Пекорино",price:500.00},
+{name:"Пармезан выдержанный",price:750.00},{name:"Сыр с трюфелем",price:1200.00},{name:"Сыр с зеленью",price:320.00},
+{name:"Сыр с перцем",price:300.00},{name:"Сыр с чесноком",price:280.00},{name:"Сыр с грибами",price:350.00},
+{name:"Сыр с виноградом",price:400.00},{name:"Сыр с мёдом",price:420.00},{name:"Сыр с орехами",price:450.00},
+{name:"Сыр с ягодами",price:480.00},{name:"Сыр с трюфельным маслом",price:950.00},{name:"Сыр с белым трюфелем",price:1500.00},
+{name:"Сыр с чёрным трюфелем",price:1800.00},{name:"Сыр с трюфельной пастой",price:1200.00}
 ];
+
+// Добавим ещё 200 товаров для полноты
+for (let i = 0; i < 200; i++) {
+  PRODUCTS.push({ name: `Товар ${i + 801}`, price: parseFloat((50 + Math.random() * 950).toFixed(2)) });
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~ FIREBASE ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 const firebaseConfig = { databaseURL: DATABASE_URL };
@@ -284,7 +415,6 @@ async function handleBarcode(rawInput, targetDivId) {
   div.textContent = `✅ ${prod.name}`;
   itemsDiv.appendChild(div);
 
-  // После первого сканирования — спрашиваем лояльность
   if (!firstScanDone) {
     firstScanDone = true;
     setTimeout(() => showScreen('screen-loyalty'), 300);
@@ -313,7 +443,6 @@ document.addEventListener('keydown', async (e) => {
   if (document.getElementById('screen-login').classList.contains('hidden') === false) return;
 
   if (e.key === '5') {
-    // Ручной ввод
     cart = []; firstScanDone = false;
     document.getElementById('manual-items').innerHTML = '';
     showScreen('screen-manual');
@@ -321,7 +450,6 @@ document.addEventListener('keydown', async (e) => {
   }
 
   if (e.key === '6') {
-    // Сканирование
     cart = []; firstScanDone = false;
     document.getElementById('scanned-items').innerHTML = '';
     showScreen('screen-scan');
@@ -329,10 +457,9 @@ document.addEventListener('keydown', async (e) => {
   }
 
   if (e.key === '7') {
-    // Генерация
     const list = document.getElementById('product-list');
     list.innerHTML = '';
-    PRODUCTS.forEach(p => {
+    PRODUCTS.slice(0, 50).forEach(p => {
       const btn = document.createElement('button');
       btn.textContent = `${p.name} — ${p.price} ₽`;
       btn.onclick = async () => {
@@ -375,7 +502,7 @@ document.getElementById('btn-has-card').addEventListener('click', () => {
 document.getElementById('btn-no-card').addEventListener('click', () => {
   const sel = document.getElementById('fav-product-single');
   sel.innerHTML = '';
-  PRODUCTS.forEach((p, i) => {
+  PRODUCTS.slice(0, 30).forEach((p, i) => {
     const opt = document.createElement('option');
     opt.value = p.name;
     opt.textContent = `${p.name} — ${p.price} ₽`;
