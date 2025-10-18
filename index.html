@@ -84,7 +84,8 @@
   <h2>Новый клиент лояльности</h2>
   <input type="text" id="new-fio" placeholder="ФИО (обязательно)" />
   <input type="tel" id="new-phone" placeholder="Телефон (обязательно)" />
-  <input type="number" id="new-birth-year" placeholder="Год рождения (напр. 1990)" min="1900" max="2025" />
+  <label>Любимый товар (5% бонусов):</label>
+  <select id="fav-product" style="height: 150px;"></select>
   <button id="btn-save-client">💾 Сохранить клиента</button>
   <button id="btn-back-client">← Вернуться к кассе</button>
 </div>
@@ -104,6 +105,10 @@
 <div id="screen-payment" class="hidden">
   <h2>Выберите способ оплаты</h2>
   <div id="cart-summary"></div>
+  <div id="bonus-section" class="hidden">
+    <p>Ваши бонусы: <span id="user-bonus">0</span> ₽</p>
+    <input type="number" id="use-bonus" placeholder="Списать бонусы (1 = 1 ₽)" min="0" />
+  </div>
   <button id="btn-pay-cash">💵 Наличными</button>
   <button id="btn-pay-card">💳 Банковской картой</button>
   <button id="btn-pay-qr" class="btn-qr">📱 QR-оплата</button>
@@ -159,8 +164,9 @@ const ACCESS_PASSWORD = '0506';
 const CASHIER_NAME = 'Фролов Юрий Михайлович';
 const INN = '0109764890';
 const DATABASE_URL = 'https://renessans-bank-3df94-default-rtdb.europe-west1.firebasedatabase.app/';
-// 🔥 ИСПОЛЬЗУЕТСЯ ТВОЙ САЙТ ОПЛАТЫ:
 const PAYMENT_URL = 'https://renessans-bank.github.io/oplata/';
+const BONUS_RATE_REGULAR = 0.02; // 2%
+const BONUS_RATE_FAVORITE = 0.05; // 5%
 
 // ~~~~~~~~~~~~~~~~~~~~~ БАЗА ТОВАРОВ (150 ТОЧНО) ~~~~~~~~~~~~~~
 const PRODUCTS = [
@@ -205,7 +211,7 @@ const PRODUCTS = [
   {name:"Гранола",price:250.00},{name:"Батончик мюсли",price:65.00},{name:"Протеиновый батончик",price:120.00},
   {name:"Энергетик",price:150.00},{name:"Лимонад",price:75.00},{name:"Квас",price:65.00},
   {name:"Компот",price:85.00},{name:"Минералка",price:50.00},{name:"Газировка",price:70.00},
-  {name:"Пиво 0.5л",price:120.00},{name:"Вино красное",price:450.00},{name:"Вино белое",price:420.00},
+  {name:"Пиво 0.5l",price:120.00},{name:"Вино красное",price:450.00},{name:"Вино белое",price:420.00},
   {name:"Шампанское",price:650.00},{name:"Водка",price:400.00},{name:"Коньяк",price:850.00},
   {name:"Виски",price:950.00},{name:"Ром",price:750.00},{name:"Джин",price:800.00},
   {name:"Ликёр",price:550.00},{name:"Сидр",price:220.00},{name:"Пиво безалкогольное",price:100.00},
@@ -303,7 +309,7 @@ const db = firebase.database();
 
 // ~~~~~~~~~~~~~~~~~~~~~ ГЛОБАЛЬНЫЕ ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 let cart = [];
-let loyaltyPhone = '';
+let loyaltyUser = null;
 let qrCheckInterval = null;
 
 // ~~~~~~~~~~~~~~~~~~~~~ УТИЛИТЫ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -374,9 +380,41 @@ async function getReceipts() {
   return snap.val() ? Object.values(snap.val()) : [];
 }
 
-async function saveLoyaltyClient(fio, phone, birthYear) {
+async function getOrCreateLoyaltyUser(phone, fio = null, fav = null) {
   const cleanPhone = phone.replace(/\D/g, '');
-  await db.ref('loyalty/' + cleanPhone).set({ fio, phone, birthYear, bonus: 0 });
+  const userRef = db.ref('loyalty/' + cleanPhone);
+  const snap = await userRef.once('value');
+  if (snap.exists()) {
+    return { phone: cleanPhone, ...snap.val() };
+  } else {
+    const newUser = { phone: cleanPhone, fio, fav, bonus: 0 };
+    await userRef.set(newUser);
+    return newUser;
+  }
+}
+
+async function addBonus(phone, amount) {
+  const cleanPhone = phone.replace(/\D/g, '');
+  const userRef = db.ref('loyalty/' + cleanPhone);
+  const snap = await userRef.once('value');
+  if (snap.exists()) {
+    const current = snap.val().bonus || 0;
+    await userRef.update({ bonus: current + amount });
+  }
+}
+
+async function useBonus(phone, amount) {
+  const cleanPhone = phone.replace(/\D/g, '');
+  const userRef = db.ref('loyalty/' + cleanPhone);
+  const snap = await userRef.once('value');
+  if (snap.exists()) {
+    const current = snap.val().bonus || 0;
+    if (current >= amount) {
+      await userRef.update({ bonus: current - amount });
+      return true;
+    }
+  }
+  return false;
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~ ОБРАБОТКА ШТРИХКОДА ~~~~~~~~~~~~~~~~~~
@@ -433,23 +471,37 @@ document.getElementById('btn-add-manual').addEventListener('click', async () => 
 });
 
 // ~~~~~~~~~~~~~~~~~~~~~ ЛОЯЛЬНОСТЬ ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-document.getElementById('btn-new-client').addEventListener('click', () => showScreen('screen-new-client'));
+document.getElementById('btn-new-client').addEventListener('click', () => {
+  const sel = document.getElementById('fav-product');
+  sel.innerHTML = '';
+  PRODUCTS.slice(0, 50).forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.name;
+    opt.textContent = p.name;
+    sel.appendChild(opt);
+  });
+  showScreen('screen-new-client');
+});
+
 document.getElementById('btn-back-client').addEventListener('click', () => showScreen('screen-main'));
 
 document.getElementById('btn-save-client').addEventListener('click', async () => {
   const fio = document.getElementById('new-fio').value.trim();
   const phone = document.getElementById('new-phone').value.trim();
-  const year = document.getElementById('new-birth-year').value;
-  if (!fio || !phone || !year) return alert('Заполните все поля');
-  await saveLoyaltyClient(fio, phone, year);
+  const fav = document.getElementById('fav-product').value;
+  if (!fio || !phone || !fav) return alert('Заполните все поля');
+  loyaltyUser = await getOrCreateLoyaltyUser(phone, fio, fav);
   document.getElementById('loyalty-phone').value = phone;
   alert('Клиент сохранён!');
   showScreen('screen-main');
 });
 
-document.getElementById('btn-apply-loyalty').addEventListener('click', () => {
-  loyaltyPhone = document.getElementById('loyalty-phone').value || '';
-  alert('Карта применена');
+document.getElementById('btn-apply-loyalty').addEventListener('click', async () => {
+  const phone = document.getElementById('loyalty-phone').value.trim();
+  if (!phone) return alert('Введите телефон');
+  loyaltyUser = await getOrCreateLoyaltyUser(phone);
+  document.getElementById('loyalty-phone').value = phone;
+  showMessage('Карта применена', 'success');
 });
 
 // ~~~~~~~~~~~~~~~~~~~~~ УПРАВЛЕНИЕ КОРЗИНОЙ ~~~~~~~~~~~~~~~~~~
@@ -527,6 +579,14 @@ document.getElementById('btn-pay').addEventListener('click', () => {
   cart.forEach(item => total += item.price);
   document.getElementById('cart-summary').innerHTML = `<h3>Итого: ${total.toFixed(2)} ₽</h3>`;
   document.getElementById('card-total').textContent = total.toFixed(2);
+  
+  if (loyaltyUser) {
+    document.getElementById('user-bonus').textContent = loyaltyUser.bonus;
+    document.getElementById('bonus-section').classList.remove('hidden');
+  } else {
+    document.getElementById('bonus-section').classList.add('hidden');
+  }
+  
   showScreen('screen-payment');
 });
 
@@ -539,7 +599,6 @@ document.getElementById('btn-pay-qr').addEventListener('click', async () => {
 
   await db.ref('qr_sessions/' + sessionId).set({ total, status: 'pending', timestamp: Date.now() });
 
-  // 🔥 ИСПОЛЬЗУЕТСЯ ТВОЙ САЙТ:
   const paymentUrl = `${PAYMENT_URL}?session=${sessionId}&total=${total}`;
   const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(paymentUrl)}`;
   document.getElementById('qr-code').innerHTML = `<img src="${qrImageUrl}" alt="QR для оплаты">`;
@@ -564,12 +623,24 @@ document.getElementById('btn-cancel-qr').addEventListener('click', () => {
 document.getElementById('btn-pay-cash').addEventListener('click', () => showScreen('screen-cash'));
 document.getElementById('btn-pay-card').addEventListener('click', () => showScreen('screen-card'));
 
+document.getElementById('use-bonus').addEventListener('input', () => {
+  const total = parseFloat(document.getElementById('cart-summary').textContent.replace(/[^0-9.]/g, ''));
+  const input = document.getElementById('use-bonus');
+  let use = parseFloat(input.value) || 0;
+  if (loyaltyUser && use > loyaltyUser.bonus) use = loyaltyUser.bonus;
+  if (use > total) use = total;
+  input.value = Math.floor(use);
+});
+
 document.getElementById('cash-given').addEventListener('input', () => {
   const cash = parseFloat(document.getElementById('cash-given').value);
-  const total = cart.reduce((sum, item) => sum + item.price, 0);
+  const totalEl = document.getElementById('cart-summary').textContent;
+  const total = parseFloat(totalEl.replace(/[^0-9.]/g, ''));
+  const bonusUsed = parseFloat(document.getElementById('use-bonus').value) || 0;
+  const finalTotal = Math.max(0, total - bonusUsed);
   const info = document.getElementById('change-info');
-  if (!isNaN(cash) && cash >= total) {
-    info.textContent = `Сдача: ${(cash - total).toFixed(2)} ₽`;
+  if (!isNaN(cash) && cash >= finalTotal) {
+    info.textContent = `Сдача: ${(cash - finalTotal).toFixed(2)} ₽`;
     info.style.color = 'green';
   } else {
     info.textContent = 'Недостаточно денег!';
@@ -578,31 +649,79 @@ document.getElementById('cash-given').addEventListener('input', () => {
 });
 
 document.getElementById('btn-complete-cash').addEventListener('click', async () => {
+  const totalEl = document.getElementById('cart-summary').textContent;
+  const total = parseFloat(totalEl.replace(/[^0-9.]/g, ''));
+  const bonusUsed = parseFloat(document.getElementById('use-bonus').value) || 0;
+  const finalTotal = Math.max(0, total - bonusUsed);
   const cash = parseFloat(document.getElementById('cash-given').value);
-  const total = cart.reduce((sum, item) => sum + item.price, 0);
-  if (isNaN(cash) || cash < total) return alert('Недостаточно денег!');
-  await finalizeSale('cash');
+  if (isNaN(cash) || cash < finalTotal) return alert('Недостаточно денег!');
+
+  if (bonusUsed > 0 && loyaltyUser) {
+    const success = await useBonus(loyaltyUser.phone, bonusUsed);
+    if (!success) return alert('Ошибка списания бонусов');
+  }
+
+  let bonusEarned = 0;
+  if (loyaltyUser) {
+    cart.forEach(item => {
+      const rate = (loyaltyUser.fav && item.name === loyaltyUser.fav) ? BONUS_RATE_FAVORITE : BONUS_RATE_REGULAR;
+      bonusEarned += item.price * rate;
+    });
+    bonusEarned = parseFloat(bonusEarned.toFixed(2));
+    await addBonus(loyaltyUser.phone, bonusEarned);
+  }
+
+  await finalizeSale('cash', cash, bonusUsed, bonusEarned);
 });
 
 document.getElementById('btn-confirm-card').addEventListener('click', async () => {
-  await finalizeSale('card');
+  const totalEl = document.getElementById('cart-summary').textContent;
+  const total = parseFloat(totalEl.replace(/[^0-9.]/g, ''));
+  const bonusUsed = parseFloat(document.getElementById('use-bonus').value) || 0;
+  const finalTotal = Math.max(0, total - bonusUsed);
+
+  if (bonusUsed > 0 && loyaltyUser) {
+    const success = await useBonus(loyaltyUser.phone, bonusUsed);
+    if (!success) return alert('Ошибка списания бонусов');
+  }
+
+  let bonusEarned = 0;
+  if (loyaltyUser) {
+    cart.forEach(item => {
+      const rate = (loyaltyUser.fav && item.name === loyaltyUser.fav) ? BONUS_RATE_FAVORITE : BONUS_RATE_REGULAR;
+      bonusEarned += item.price * rate;
+    });
+    bonusEarned = parseFloat(bonusEarned.toFixed(2));
+    await addBonus(loyaltyUser.phone, bonusEarned);
+  }
+
+  await finalizeSale('card', null, bonusUsed, bonusEarned);
 });
 
 document.getElementById('btn-back-cash').addEventListener('click', () => showScreen('screen-payment'));
 document.getElementById('btn-back-card').addEventListener('click', () => showScreen('screen-payment'));
 
 // ~~~~~~~~~~~~~~~~~~~~~ ЗАВЕРШЕНИЕ ПРОДАЖИ ~~~~~~~~~~~~~~~~~~~
-async function finalizeSale(paymentMethod) {
-  const total = cart.reduce((sum, item) => sum + item.price, 0);
+async function finalizeSale(paymentMethod, cashGiven = null, bonusUsed = 0, bonusEarned = 0) {
+  const totalEl = document.getElementById('cart-summary').textContent;
+  const total = parseFloat(totalEl.replace(/[^0-9.]/g, ''));
+  const finalTotal = Math.max(0, total - bonusUsed);
   const receipt = {
     items: cart,
     total,
+    finalTotal,
+    bonusUsed,
+    bonusEarned,
     paymentMethod,
-    loyaltyPhone,
+    loyaltyPhone: loyaltyUser ? loyaltyUser.phone : null,
     cashier: CASHIER_NAME,
     inn: INN,
     timestamp: Date.now()
   };
+  if (cashGiven !== null) {
+    receipt.cashGiven = cashGiven;
+    receipt.change = parseFloat((cashGiven - finalTotal).toFixed(2));
+  }
   await saveReceipt(receipt);
   renderReceipt(receipt);
   showScreen('screen-receipt');
@@ -612,14 +731,24 @@ function renderReceipt(r) {
   let html = `<h2 style="text-align:center">КАССОВЫЙ ЧЕК</h2><p><strong>ИНН:</strong> ${r.inn}</p><p><strong>Кассир:</strong> ${r.cashier}</p><hr>`;
   r.items.forEach(i => html += `<p>${i.name} — ${i.price.toFixed(2)} ₽</p>`);
   html += `<hr><p><strong>ИТОГО:</strong> ${r.total.toFixed(2)} ₽</p>`;
-  html += `<p><strong>Оплата:</strong> ${r.paymentMethod === 'cash' ? 'Наличные' : r.paymentMethod === 'card' ? 'Карта' : 'QR'}</p>`;
+  if (r.bonusUsed > 0) {
+    html += `<p><strong>Списано бонусов:</strong> ${r.bonusUsed.toFixed(2)} ₽</p>`;
+    html += `<p><strong>К оплате:</strong> ${r.finalTotal.toFixed(2)} ₽</p>`;
+  }
+  if (r.cashGiven !== undefined) {
+    html += `<p><strong>Наличными:</strong> ${r.cashGiven.toFixed(2)} ₽</p>`;
+    html += `<p><strong>Сдача:</strong> ${r.change.toFixed(2)} ₽</p>`;
+  }
+  if (r.bonusEarned > 0) {
+    html += `<p><strong>+ Начислено бонусов:</strong> ${r.bonusEarned.toFixed(2)} ₽</p>`;
+  }
   html += `<p><strong>Дата:</strong> ${new Date(r.timestamp).toLocaleString('ru-RU')}</p>`;
   document.getElementById('receipt-content').innerHTML = html;
 }
 
 document.getElementById('btn-print').addEventListener('click', () => window.print());
 document.getElementById('btn-new-sale').addEventListener('click', () => {
-  cart = []; loyaltyPhone = '';
+  cart = []; loyaltyUser = null;
   document.getElementById('loyalty-phone').value = '';
   showScreen('screen-main');
   renderCart();
