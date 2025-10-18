@@ -35,7 +35,7 @@
     #hidden-input { position: absolute; left: -9999px; opacity: 0; }
     #cart-items { min-height: 120px; background: white; padding: 12px; border-radius: 8px; margin: 12px 0; }
     #barcode-svg { width: 100%; height: 100px; margin: 15px 0; }
-    #qr-code img { width: 200px; height: 200px; margin: 10px auto; display: block; }
+    #qr-code img { width: 300px; height: 300px; margin: 10px auto; display: block; }
   </style>
 </head>
 <body>
@@ -159,7 +159,8 @@ const ACCESS_PASSWORD = '0506';
 const CASHIER_NAME = 'Фролов Юрий Михайлович';
 const INN = '0109764890';
 const DATABASE_URL = 'https://renessans-bank-3df94-default-rtdb.europe-west1.firebasedatabase.app/';
-const PAYMENT_URL = 'https://yourusername.github.io/pyaterka/payment.html'; // ← ЗАМЕНИ НА СВОЙ!
+// 🔥 ИСПОЛЬЗУЕТСЯ ТВОЙ САЙТ ОПЛАТЫ:
+const PAYMENT_URL = 'https://renessans-bank.github.io/oplata/';
 
 // ~~~~~~~~~~~~~~~~~~~~~ БАЗА ТОВАРОВ (150 ТОЧНО) ~~~~~~~~~~~~~~
 const PRODUCTS = [
@@ -170,7 +171,7 @@ const PRODUCTS = [
   {name:"Кофе растворимый",price:350.00},{name:"Печенье",price:85.00},{name:"Сок 1л",price:130.00},
   {name:"Макароны",price:65.00},{name:"Кетчуп",price:110.00},{name:"Майонез",price:125.00},
   {name:"Салфетки",price:40.00},{name:"Зубная паста",price:160.00},{name:"Шампунь",price:290.00},
-  {name:"Вода 1.5л",price:55.00},{name:"Пельмени",price:220.00},{name:"Сметана 200г",price:99.00},
+  {name:"Вода 1.5l",price:55.00},{name:"Пельмени",price:220.00},{name:"Сметана 200г",price:99.00},
   {name:"Творог 500г",price:180.00},{name:"Кефир 1л",price:85.00},{name:"Сосиски",price:190.00},
   {name:"Гречка 1кг",price:95.00},{name:"Овсянка",price:110.00},{name:"Печенье овсяное",price:75.00},
   {name:"Сгущёнка",price:130.00},{name:"Какао",price:160.00},{name:"Мёд 500г",price:450.00},
@@ -538,14 +539,13 @@ document.getElementById('btn-pay-qr').addEventListener('click', async () => {
 
   await db.ref('qr_sessions/' + sessionId).set({ total, status: 'pending', timestamp: Date.now() });
 
-  // Генерируем QR на внешний файл оплаты
+  // 🔥 ИСПОЛЬЗУЕТСЯ ТВОЙ САЙТ:
   const paymentUrl = `${PAYMENT_URL}?session=${sessionId}&total=${total}`;
   const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(paymentUrl)}`;
   document.getElementById('qr-code').innerHTML = `<img src="${qrImageUrl}" alt="QR для оплаты">`;
   document.getElementById('qr-status').textContent = 'Ожидание оплаты...';
   showScreen('screen-qr');
 
-  // Проверяем статус каждые 2 сек
   qrCheckInterval = setInterval(async () => {
     const snap = await db.ref('qr_sessions/' + sessionId).once('value');
     if (snap.exists() && snap.val().status === 'paid') {
