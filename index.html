@@ -16,30 +16,28 @@
       width: 100%; padding: 12px; margin: 6px 0; border: none; border-radius: 6px;
       background: #3498db; color: white; font-size: 15px; cursor: pointer;
     }
-    .btn-secondary { background: #95a5a6; }
-    .btn-success { background: #2ecc71; }
-    .btn-danger { background: #e74c3c; }
-    button:hover { opacity: 0.9; }
-    input, select {
-      width: 100%; padding: 12px; margin: 6px 0; border: 1px solid #ccc; border-radius: 4px;
-    }
     .hidden { display: none; }
     .receipt, .archive-item, .barcode-print-area {
       background: white; padding: 15px; margin: 15px 0; border-radius: 8px;
     }
     video { width: 100%; height: auto; background: black; margin: 10px 0; }
     #barcode-svg { width: 100%; height: auto; margin: 15px 0; }
-    label { display: block; margin-top: 10px; font-weight: bold; }
-    @media print {
-      body * { display: none; }
-      .barcode-print-area, .barcode-print-area * { display: block !important; }
-    }
+    input { width: 100%; padding: 12px; margin: 6px 0; border: 1px solid #ccc; border-radius: 4px; }
+    #cart-display { min-height: 100px; background: white; padding: 10px; border-radius: 8px; margin: 10px 0; }
+    .instructions { color: #7f8c8d; font-size: 12px; text-align: center; margin-top: 10px; }
   </style>
 </head>
 <body>
 
+<!-- Экран выбора режима -->
+<div id="screen-mode-select">
+  <h2>Выберите режим</h2>
+  <button id="btn-mode-cashier">💻 Касса (ноутбук)</button>
+  <button id="btn-mode-scanner">📱 Сканер (телефон)</button>
+</div>
+
 <!-- Экран входа -->
-<div id="screen-login">
+<div id="screen-login" class="hidden">
   <h2>Касса «Пятёрка»</h2>
   <form id="loginForm">
     <input type="password" id="password" placeholder="Пароль" autocomplete="off" />
@@ -47,12 +45,51 @@
   </form>
 </div>
 
-<!-- Главное меню -->
-<div id="screen-dashboard" class="hidden">
-  <h1>Касса «Пятёрка»</h1>
+<!-- Касса: Обслуживание -->
+<div id="screen-cashier" class="hidden">
+  <h2>Обслуживание покупателя</h2>
+  <div id="loyalty-section">
+    <input type="tel" id="phone-loyalty" placeholder="Номер телефона для карты лояльности" />
+    <button id="btn-start-service">Начать обслуживание</button>
+  </div>
+  <div id="cart-display" class="hidden">
+    <h3>Товары:</h3>
+    <div id="cart-items"></div>
+    <h3>Итого: <span id="total">0.00</span> ₽</h3>
+    <button id="btn-pay-cash">💵 Наличными</button>
+    <button id="btn-pay-card">💳 Картой</button>
+  </div>
+  <p class="instructions">Нажмите Ctrl+Shift для выхода в меню. Нажмите 1 для продолжения обслуживания.</p>
+</div>
+
+<!-- Сканер: Телефон -->
+<div id="screen-scanner" class="hidden">
+  <h2>Сканер</h2>
+  <video id="video" playsinline style="width:100%; height:auto;"></video>
+  <p id="scan-status">Сканирование активно...</p>
+  <p class="instructions">Отсканируйте штрихкоды. Товары появятся на кассе автоматически.</p>
+</div>
+
+<!-- Оплата наличными -->
+<div id="screen-cash" class="hidden">
+  <h2>Наличные</h2>
+  <input type="number" id="cash-given" placeholder="Сколько дал покупатель?" step="0.01" />
+  <p id="change-info"></p>
+  <button id="btn-complete-cash">✅ Завершить</button>
+</div>
+
+<!-- Оплата картой -->
+<div id="screen-card" class="hidden">
+  <h2>Оплата картой</h2>
+  <p>Сумма: <span id="card-total">0.00</span> ₽</p>
+  <p style="color:#e74c3c;">Кассир, подтвердите оплату</p>
+  <button id="btn-confirm-card" class="btn-success">✅ Подтвердить</button>
+</div>
+
+<!-- Главное меню (скрытое) -->
+<div id="screen-main-menu" class="hidden">
+  <h1>Главное меню</h1>
   <button id="btn-generate">🏷️ Сгенерировать штрихкод</button>
-  <button id="btn-scan">📱 Сканировать товары</button>
-  <button id="btn-checkout" class="hidden">💰 Перейти к оплате (<span id="cart-count">0</span>)</button>
   <button id="btn-archive">📂 Архив покупок</button>
   <button id="btn-logout">🔐 Выйти</button>
 </div>
@@ -60,106 +97,25 @@
 <!-- Генерация штрихкода -->
 <div id="screen-generate" class="hidden">
   <h2>Генерация штрихкода</h2>
-  <button id="back-from-generate">← Назад</button>
-  <div id="product-list" style="max-height: 400px; overflow-y: auto;"></div>
+  <div id="product-list" style="max-height: 300px; overflow-y: auto;"></div>
   <div id="generated-barcode" class="hidden">
-    <h3>Сгенерировано:</h3>
     <svg id="barcode-svg"></svg>
     <p id="barcode-text"></p>
-    <button id="btn-print-barcode">🖨️ Распечатать штрихкод</button>
   </div>
-</div>
-
-<!-- Сканирование -->
-<div id="screen-scan" class="hidden">
-  <h2>Сканирование (сканируйте подряд)</h2>
-  <button id="finish-scanning" class="btn-danger">⏹️ Завершить сканирование</button>
-  <button id="start-scan">▶️ Запустить камеру</button>
-  <video id="video" playsinline></video>
-  <p id="scan-result"></p>
-  <div id="scanned-items"></div>
-</div>
-
-<!-- Лояльность -->
-<div id="screen-loyalty" class="hidden">
-  <h2>Программа лояльности</h2>
-  <button id="btn-has-card">✅ У меня есть карта</button>
-  <button id="btn-no-card">🆕 Зарегистрировать карту</button>
-  <button id="btn-skip-loyalty" class="btn-secondary">⏭️ Пропустить</button>
-</div>
-
-<!-- Ввод телефона -->
-<div id="screen-enter-phone" class="hidden">
-  <h2>Введите номер телефона</h2>
-  <input type="tel" id="phone-input" placeholder="+7 (999) 123-45-67" />
-  <button id="btn-continue-with-phone">Продолжить</button>
-  <button id="back-from-phone">← Назад</button>
-</div>
-
-<!-- Регистрация -->
-<div id="screen-register-card" class="hidden">
-  <h2>Регистрация карты</h2>
-  <input type="text" id="reg-fio" placeholder="ФИО" />
-  <input type="tel" id="reg-phone" placeholder="Телефон" />
-  <label>Выберите любимый продукт (5% бонусов):</label>
-  <select id="fav-product-single" style="height: 200px;"></select>
-  <button id="btn-register-card">Зарегистрировать</button>
-  <button id="back-from-register">← Назад</button>
-</div>
-
-<!-- Оплата -->
-<div id="screen-checkout" class="hidden">
-  <h2>Оплата</h2>
-  <div id="cart-items"></div>
-  <h3>Итого: <span id="total">0.00</span> ₽</h3>
-  <div id="bonus-info" class="hidden">
-    <p>Ваши бонусы: <span id="user-bonus">0</span> ₽</p>
-    <input type="number" id="use-bonus" placeholder="Списать бонусы (1 бонус = 1 ₽)" min="0" />
-  </div>
-  <button id="btn-pay-cash">💵 Наличными</button>
-  <button id="btn-pay-card">💳 Оплатить картой</button>
-  <button id="back-from-payment">← Назад</button>
-</div>
-
-<!-- Наличные -->
-<div id="screen-cash" class="hidden">
-  <h2>Оплата наличными</h2>
-  <input type="number" id="cash-given" placeholder="Сколько дал покупатель?" step="0.01" />
-  <p id="change-info"></p>
-  <button id="btn-complete-cash">✅ Завершить продажу</button>
-  <button id="back-from-cash">← Назад</button>
-</div>
-
-<!-- Карта -->
-<div id="screen-card" class="hidden">
-  <h2>Оплата картой</h2>
-  <p>Сумма к оплате: <span id="card-total">0.00</span> ₽</p>
-  <p style="color: #e74c3c;">Кассир, подтвердите оплату</p>
-  <button id="btn-confirm-card" class="btn-success">✅ Подтвердить оплату</button>
-  <button id="back-from-card">← Назад</button>
+  <button id="back-from-generate">← Назад</button>
 </div>
 
 <!-- Архив -->
 <div id="screen-archive" class="hidden">
   <h2>Архив покупок</h2>
-  <button id="back-from-archive">← Назад</button>
   <div id="archive-list"></div>
+  <button id="back-from-archive">← Назад</button>
 </div>
 
 <!-- Чек -->
 <div id="screen-receipt" class="hidden">
   <div class="receipt" id="receipt-content"></div>
-  <button id="btn-print">🖨️ Распечатать чек</button>
   <button id="btn-new-sale">➕ Новая продажа</button>
-</div>
-
-<!-- Скрытая область для печати штрихкода -->
-<div id="print-area" class="hidden">
-  <div class="barcode-print-area">
-    <h3 style="text-align:center">Штрихкод товара</h3>
-    <svg id="print-barcode-svg" style="width:100%; height:auto;"></svg>
-    <p id="print-barcode-text" style="text-align:center; font-size:18px; margin-top:10px;"></p>
-  </div>
 </div>
 
 <script>
@@ -170,19 +126,13 @@ const ACCESS_PASSWORD = '0506';
 const CASHIER_NAME = 'Фролов Юрий Михайлович';
 const INN = '0109764890';
 const DATABASE_URL = 'https://renessans-bank-3df94-default-rtdb.europe-west1.firebasedatabase.app/';
-const BONUS_RATE_REGULAR = 0.02;
-const BONUS_RATE_FAVORITE = 0.05;
 
 // ~~~~~~~~~~~~~~~~~~~~~ ТОВАРЫ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-const PRODUCTS_1000 = [
+const PRODUCTS = [
 {name:"Молоко 1л",price:119.90},{name:"Хлеб белый",price:64.50},{name:"Яйца 10 шт",price:149.00},
 {name:"Сыр 200г",price:249.90},{name:"Кола 0.5л",price:89.00},{name:"Шоколад",price:95.50},
-{name:"Масло сливочное",price:189.00},{name:"Картофель 1кг",price:45.00},{name:"Сахар 1кг",price:79.90},
-{name:"Чай черный",price:210.00},{name:"Рис 1кг",price:120.00},{name:"Кофе растворимый",price:350.00}
+{name:"Масло сливочное",price:189.00},{name:"Картофель 1кг",price:45.00},{name:"Сахар 1кг",price:79.90}
 ];
-for (let i = 0; i < 988; i++) {
-  PRODUCTS_1000.push({ name: `Товар ${i + 13}`, price: parseFloat((50 + Math.random() * 950).toFixed(2)) });
-}
 
 // ~~~~~~~~~~~~~~~~~~~~~ FIREBASE ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 const firebaseConfig = { databaseURL: DATABASE_URL };
@@ -190,12 +140,11 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 // ~~~~~~~~~~~~~~~~~~~~~ ГЛОБАЛЬНЫЕ ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-let cart = [];
-let currentStream = null;
-let currentBarcode = '';
-let loyaltyUser = null;
+let currentMode = null; // 'cashier' или 'scanner'
+let loyaltyPhone = '';
+let currentSessionId = Date.now().toString();
 
-// ~~~~~~~~~~~~~~~~~~~~~ ГЕНЕРАЦИЯ EAN-13 ~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~ УТИЛИТЫ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 function generateEAN13() {
   const prefix = '200';
   const random = Math.floor(Math.random() * 1e9).toString().padStart(9, '0');
@@ -209,66 +158,13 @@ function generateEAN13() {
   return base + check;
 }
 
-// ~~~~~~~~~~~~~~~~~~~~~ ШТРИХКОД + ПЕЧАТЬ ~~~~~~~~~~~~~~~~~~~~
-function drawRealBarcode(barcode, target = 'barcode-svg') {
-  document.getElementById(target).innerHTML = '';
-  try {
-    JsBarcode(`#${target}`, barcode, {
-      format: "EAN13",
-      lineColor: "#000",
-      height: 100,
-      displayValue: true,
-      fontSize: 18,
-      textAlign: "center",
-      textPosition: "bottom",
-      background: "#fff",
-      margin: 10
-    });
-  } catch (e) {
-    console.error("JsBarcode error:", e);
-  }
-}
-
-function printBarcode(barcode, text) {
-  drawRealBarcode(barcode, 'print-barcode-svg');
-  document.getElementById('print-barcode-text').textContent = text;
-  const printContent = document.getElementById('print-area').innerHTML;
-  const original = document.body.innerHTML;
-  document.body.innerHTML = printContent;
-  window.print();
-  document.body.innerHTML = original;
-  showScreen('screen-generate');
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~ ВСПОМОГАТЕЛЬНЫЕ ~~~~~~~~~~~~~~~~~~~~~~~
-function calculateChange(cash, total) {
-  return parseFloat((cash - total).toFixed(2));
-}
-
 function showScreen(id) {
   document.querySelectorAll('[id^="screen-"]').forEach(el => el.classList.add('hidden'));
   document.getElementById(id).classList.remove('hidden');
 }
 
-function updateCartUI() {
-  document.getElementById('cart-count').textContent = cart.length;
-  document.getElementById('btn-checkout').classList.toggle('hidden', cart.length === 0);
-}
-
-function renderCart(containerId = 'cart-items') {
-  const container = document.getElementById(containerId);
-  container.innerHTML = '';
-  let total = 0;
-  cart.forEach(item => {
-    total += item.price * item.quantity;
-    const div = document.createElement('div');
-    div.innerHTML = `<strong>${item.name}</strong> — ${item.price} ₽`;
-    container.appendChild(div);
-  });
-  document.getElementById('total').textContent = total.toFixed(2);
-  if (document.getElementById('card-total')) {
-    document.getElementById('card-total').textContent = total.toFixed(2);
-  }
+function calculateChange(cash, total) {
+  return parseFloat((cash - total).toFixed(2));
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~ FIREBASE ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -294,254 +190,122 @@ async function getReceipts() {
   return snap.val() ? Object.values(snap.val()) : [];
 }
 
-async function getOrCreateLoyaltyUser(phone, fio = null, fav = null) {
-  const cleanPhone = phone.replace(/\D/g, '');
-  const userRef = db.ref('loyalty/' + cleanPhone);
-  const snap = await userRef.once('value');
-  if (snap.exists()) {
-    return { phone: cleanPhone, ...snap.val() };
-  } else {
-    const newUser = { phone: cleanPhone, fio, fav, bonus: 0 };
-    await userRef.set(newUser);
-    return newUser;
-  }
-}
-
-async function addBonus(phone, amount) {
-  const cleanPhone = phone.replace(/\D/g, '');
-  const userRef = db.ref('loyalty/' + cleanPhone);
-  const snap = await userRef.once('value');
-  if (snap.exists()) {
-    const current = snap.val().bonus || 0;
-    await userRef.update({ bonus: current + amount });
-  }
-}
-
-async function useBonus(phone, amount) {
-  const cleanPhone = phone.replace(/\D/g, '');
-  const userRef = db.ref('loyalty/' + cleanPhone);
-  const snap = await userRef.once('value');
-  if (snap.exists()) {
-    const current = snap.val().bonus || 0;
-    if (current >= amount) {
-      await userRef.update({ bonus: current - amount });
-      return true;
-    }
-  }
-  return false;
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~ ИНИЦИАЛИЗАЦИЯ ЛЮБИМОГО ~~~~~~~~~~~~~~~
-function initFavoriteProductSelect() {
-  const sel = document.getElementById('fav-product-single');
-  sel.innerHTML = '';
-  PRODUCTS_1000.slice(0, 50).forEach((p, i) => {
-    const opt = document.createElement('option');
-    opt.value = p.name;
-    opt.textContent = `${p.name} — ${p.price} ₽`;
-    sel.appendChild(opt);
+// ~~~~~~~~~~~~~~~~~~~~~ СИНХРОНИЗАЦИЯ КОРЗИНЫ ~~~~~~~~~~~~~~~~
+function syncCartToFirebase(cart) {
+  db.ref('sessions/' + currentSessionId).set({
+    cart,
+    timestamp: Date.now(),
+    phone: loyaltyPhone
   });
 }
 
+function listenToCartUpdates() {
+  const cartRef = db.ref('sessions/' + currentSessionId);
+  cartRef.on('value', (snapshot) => {
+    const data = snapshot.val();
+    if (data && data.cart) {
+      renderCart(data.cart);
+    }
+  });
+}
+
+function renderCart(cart) {
+  const container = document.getElementById('cart-items');
+  container.innerHTML = '';
+  let total = 0;
+  cart.forEach(item => {
+    total += item.price;
+    const div = document.createElement('div');
+    div.textContent = `✅ ${item.name} — ${item.price.toFixed(2)} ₽`;
+    container.appendChild(div);
+  });
+  document.getElementById('total').textContent = total.toFixed(2);
+  document.getElementById('card-total').textContent = total.toFixed(2);
+}
+
 // ~~~~~~~~~~~~~~~~~~~~~ ОБРАБОТЧИКИ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+document.getElementById('btn-mode-cashier').addEventListener('click', () => {
+  currentMode = 'cashier';
+  showScreen('screen-login');
+});
+
+document.getElementById('btn-mode-scanner').addEventListener('click', () => {
+  currentMode = 'scanner';
+  showScreen('screen-login');
+});
+
 document.getElementById('loginForm').addEventListener('submit', function(e) {
   e.preventDefault();
   if (document.getElementById('password').value === ACCESS_PASSWORD) {
-    localStorage.setItem('auth', 'true');
-    showScreen('screen-dashboard');
+    if (currentMode === 'cashier') {
+      showScreen('screen-cashier');
+      listenToCartUpdates();
+    } else if (currentMode === 'scanner') {
+      showScreen('screen-scanner');
+      startScanner();
+    }
   } else {
     alert('Неверный пароль!');
   }
 });
 
-document.getElementById('btn-logout').addEventListener('click', () => {
-  localStorage.removeItem('auth');
-  showScreen('screen-login');
-  cart = []; loyaltyUser = null;
-  updateCartUI();
+// ~~~~~~~~~~~~~~~~~~~~~ КАССА ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+document.getElementById('btn-start-service').addEventListener('click', () => {
+  loyaltyPhone = document.getElementById('phone-loyalty').value || '';
+  document.getElementById('loyalty-section').classList.add('hidden');
+  document.getElementById('cart-display').classList.remove('hidden');
 });
 
-// ~~~~~~~~~~~~~~~~~~~~~ ГЕНЕРАЦИЯ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-document.getElementById('btn-generate').addEventListener('click', () => {
-  const list = document.getElementById('product-list');
-  list.innerHTML = '';
-  PRODUCTS_1000.slice(0, 30).forEach(p => {
-    const btn = document.createElement('button');
-    btn.textContent = `${p.name} — ${p.price} ₽`;
-    btn.onclick = async () => {
-      const barcode = generateEAN13();
-      console.log("Сгенерирован и сохранён в Firebase:", barcode);
-      try {
-        drawRealBarcode(barcode);
-        await addProductToDB(p, barcode);
-        document.getElementById('barcode-text').textContent = barcode;
-        document.getElementById('generated-barcode').classList.remove('hidden');
-        currentBarcode = barcode;
-      } catch (err) {
-        alert("Ошибка генерации");
-      }
-    };
-    list.appendChild(btn);
-  });
-  showScreen('screen-generate');
-});
-
-document.getElementById('btn-print-barcode').addEventListener('click', () => {
-  const text = document.getElementById('barcode-text').textContent;
-  printBarcode(currentBarcode, text);
-});
-
-// ~~~~~~~~~~~~~~~~~~~~~ СКАНИРОВАНИЕ ~~~~~~~~~~~~~~~~~~~~~~~~~
-document.getElementById('btn-scan').addEventListener('click', () => {
-  showScreen('screen-scan');
-  document.getElementById('scanned-items').innerHTML = '';
-});
-
-document.getElementById('finish-scanning').addEventListener('click', () => {
-  if (cart.length === 0) {
-    alert('Нет товаров для оплаты');
-    return;
-  }
-  showScreen('screen-loyalty');
-});
-
-document.getElementById('start-scan').addEventListener('click', async () => {
+// ~~~~~~~~~~~~~~~~~~~~~ СКАНЕР ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+async function startScanner() {
   const video = document.getElementById('video');
-  const res = document.getElementById('scan-result');
-  res.textContent = 'Запуск камеры...';
+  const status = document.getElementById('scan-status');
 
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    currentStream = stream;
     video.srcObject = stream;
 
     const reader = new ZXing.BrowserMultiFormatReader();
     reader.decodeFromVideoDevice(null, 'video', async (result) => {
       if (result) {
-        // 🔥 КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: очистка и нормализация
         let raw = result.getText();
-        let clean = raw.replace(/\D/g, ''); // только цифры
-        if (clean.length > 13) clean = clean.slice(-13); // последние 13
+        let clean = raw.replace(/\D/g, '');
+        if (clean.length > 13) clean = clean.slice(-13);
         if (clean.length === 13) {
-          console.log("Отсканирован и нормализован:", clean);
-          res.textContent = 'Сканировано: ' + clean;
+          status.textContent = 'Сканировано: ' + clean;
           const prod = await getProductByBarcode(clean);
-          if (!prod) {
-            alert('Товар не найден в базе! Проверьте, что штрихкод сгенерирован в этой кассе.');
-          } else if (prod.used) {
-            alert('Этот штрихкод уже использован!');
-          } else {
+          if (prod && !prod.used) {
             await markAsUsed(clean);
-            cart.push({ ...prod, quantity: 1 });
-            updateCartUI();
-            const itemsDiv = document.getElementById('scanned-items');
-            const div = document.createElement('div');
-            div.textContent = `✅ ${prod.name}`;
-            itemsDiv.appendChild(div);
+            // Отправляем в сессию
+            const cartRef = db.ref('sessions/' + currentSessionId);
+            const snap = await cartRef.once('value');
+            let cart = snap.val() && snap.val().cart ? snap.val().cart : [];
+            cart.push({ name: prod.name, price: prod.price, barcode: clean });
+            syncCartToFirebase(cart);
+          } else {
+            status.textContent = 'Товар не найден или уже использован';
           }
         } else {
-          res.textContent = 'Неверный формат штрихкода: ' + raw;
-          alert('Штрихкод должен быть 13 цифр. Получено: ' + clean.length);
+          status.textContent = 'Неверный формат: ' + raw;
         }
         reader.reset();
-        stream.getTracks().forEach(t => t.stop());
       }
     });
   } catch (err) {
-    res.textContent = 'Ошибка камеры: ' + err.message;
+    status.textContent = 'Ошибка камеры: ' + err.message;
   }
-});
-
-// ~~~~~~~~~~~~~~~~~~~~~ ЛОЯЛЬНОСТЬ ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-document.getElementById('btn-has-card').addEventListener('click', () => {
-  showScreen('screen-enter-phone');
-});
-
-document.getElementById('btn-no-card').addEventListener('click', () => {
-  initFavoriteProductSelect();
-  showScreen('screen-register-card');
-});
-
-document.getElementById('btn-skip-loyalty').addEventListener('click', () => {
-  loyaltyUser = null;
-  showScreen('screen-checkout');
-  renderCart();
-});
-
-document.getElementById('btn-continue-with-phone').addEventListener('click', async () => {
-  const phone = document.getElementById('phone-input').value;
-  if (!phone) return alert('Введите телефон');
-  loyaltyUser = await getOrCreateLoyaltyUser(phone);
-  showScreen('screen-checkout');
-  renderCart();
-  document.getElementById('bonus-info').classList.remove('hidden');
-  document.getElementById('user-bonus').textContent = loyaltyUser.bonus;
-});
-
-document.getElementById('btn-register-card').addEventListener('click', async () => {
-  const fio = document.getElementById('reg-fio').value;
-  const phone = document.getElementById('reg-phone').value;
-  const fav = document.getElementById('fav-product-single').value;
-  if (!fio || !phone || !fav) return alert('Заполните все поля');
-  loyaltyUser = await getOrCreateLoyaltyUser(phone, fio, fav);
-  showScreen('screen-checkout');
-  renderCart();
-  document.getElementById('bonus-info').classList.remove('hidden');
-  document.getElementById('user-bonus').textContent = loyaltyUser.bonus;
-});
-
-['back-from-generate', 'back-from-scan', 'back-from-payment', 'back-from-cash', 'back-from-card', 'back-from-archive', 'back-from-phone', 'back-from-register'].forEach(id => {
-  document.getElementById(id).addEventListener('click', () => showScreen('screen-dashboard'));
-});
-
-document.getElementById('btn-archive').addEventListener('click', async () => {
-  const receipts = await getReceipts();
-  const list = document.getElementById('archive-list');
-  list.innerHTML = '<h3>История покупок</h3>';
-  if (receipts.length === 0) {
-    list.innerHTML += '<p>Нет покупок</p>';
-  } else {
-    receipts.reverse().forEach(r => {
-      const div = document.createElement('div');
-      div.className = 'archive-item';
-      div.innerHTML = `
-        <p><strong>${new Date(r.timestamp).toLocaleString('ru-RU')}</strong></p>
-        <p>Сумма: ${r.total.toFixed(2)} ₽</p>
-        ${r.bonusUsed ? `<p>Списано бонусов: ${r.bonusUsed} ₽</p>` : ''}
-        ${r.loyaltyPhone ? `<p>Телефон: ${r.loyaltyPhone}</p>` : ''}
-      `;
-      list.appendChild(div);
-    });
-  }
-  showScreen('screen-archive');
-});
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~ ОПЛАТА ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-document.getElementById('btn-checkout').addEventListener('click', () => {
-  showScreen('screen-loyalty');
-});
-
 document.getElementById('btn-pay-cash').addEventListener('click', () => showScreen('screen-cash'));
 document.getElementById('btn-pay-card').addEventListener('click', () => showScreen('screen-card'));
 
-document.getElementById('use-bonus').addEventListener('input', () => {
-  const total = parseFloat(document.getElementById('total').textContent);
-  const bonusInput = document.getElementById('use-bonus');
-  let use = parseFloat(bonusInput.value) || 0;
-  if (loyaltyUser && use > loyaltyUser.bonus) use = loyaltyUser.bonus;
-  if (use > total) use = total;
-  bonusInput.value = use;
-});
-
-// ~~~~~~~~~~~~~~~~~~~~~ НАЛИЧНЫЕ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 document.getElementById('cash-given').addEventListener('input', () => {
   const cash = parseFloat(document.getElementById('cash-given').value);
   const total = parseFloat(document.getElementById('total').textContent);
-  const bonusUsed = parseFloat(document.getElementById('use-bonus').value) || 0;
-  const finalTotal = Math.max(0, total - bonusUsed);
   const info = document.getElementById('change-info');
-  if (!isNaN(cash) && cash >= finalTotal) {
-    info.textContent = `Сдача: ${calculateChange(cash, finalTotal).toFixed(2)} ₽`;
+  if (!isNaN(cash) && cash >= total) {
+    info.textContent = `Сдача: ${calculateChange(cash, total).toFixed(2)} ₽`;
     info.style.color = 'green';
   } else {
     info.textContent = 'Недостаточно денег!';
@@ -551,134 +315,141 @@ document.getElementById('cash-given').addEventListener('input', () => {
 
 document.getElementById('btn-complete-cash').addEventListener('click', async () => {
   const total = parseFloat(document.getElementById('total').textContent);
-  const bonusUsed = parseFloat(document.getElementById('use-bonus').value) || 0;
-  const finalTotal = Math.max(0, total - bonusUsed);
   const cash = parseFloat(document.getElementById('cash-given').value);
-  if (isNaN(cash) || cash < finalTotal) return alert('Недостаточно денег!');
-
-  if (bonusUsed > 0 && loyaltyUser) {
-    const success = await useBonus(loyaltyUser.phone, bonusUsed);
-    if (!success) return alert('Ошибка списания бонусов');
-  }
-
-  let bonusEarned = 0;
-  if (loyaltyUser) {
-    cart.forEach(item => {
-      const rate = (loyaltyUser.fav && item.name === loyaltyUser.fav) ? BONUS_RATE_FAVORITE : BONUS_RATE_REGULAR;
-      bonusEarned += item.price * rate;
-    });
-    bonusEarned = parseFloat(bonusEarned.toFixed(2));
-    await addBonus(loyaltyUser.phone, bonusEarned);
-  }
+  if (isNaN(cash) || cash < total) return alert('Недостаточно денег!');
 
   const receipt = {
-    items: cart,
+    items: [],
     total,
-    finalTotal,
     cashGiven: cash,
-    change: calculateChange(cash, finalTotal),
-    bonusUsed,
-    bonusEarned: bonusEarned || 0,
-    loyaltyPhone: loyaltyUser ? loyaltyUser.phone : null,
+    change: calculateChange(cash, total),
+    loyaltyPhone,
     cashier: CASHIER_NAME,
     inn: INN,
     timestamp: Date.now()
   };
+
+  // Получаем актуальную корзину
+  const cartRef = db.ref('sessions/' + currentSessionId);
+  const snap = await cartRef.once('value');
+  if (snap.val() && snap.val().cart) {
+    receipt.items = snap.val().cart;
+  }
+
   await saveReceipt(receipt);
   renderReceipt(receipt);
   showScreen('screen-receipt');
 });
 
-// ~~~~~~~~~~~~~~~~~~~~~ КАРТА ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 document.getElementById('btn-confirm-card').addEventListener('click', async () => {
   const total = parseFloat(document.getElementById('total').textContent);
-  const bonusUsed = parseFloat(document.getElementById('use-bonus').value) || 0;
-  const finalTotal = Math.max(0, total - bonusUsed);
-
-  if (bonusUsed > 0 && loyaltyUser) {
-    const success = await useBonus(loyaltyUser.phone, bonusUsed);
-    if (!success) return alert('Ошибка списания бонусов');
-  }
-
-  let bonusEarned = 0;
-  if (loyaltyUser) {
-    cart.forEach(item => {
-      const rate = (loyaltyUser.fav && item.name === loyaltyUser.fav) ? BONUS_RATE_FAVORITE : BONUS_RATE_REGULAR;
-      bonusEarned += item.price * rate;
-    });
-    bonusEarned = parseFloat(bonusEarned.toFixed(2));
-    await addBonus(loyaltyUser.phone, bonusEarned);
-  }
-
   const receipt = {
-    items: cart,
+    items: [],
     total,
-    finalTotal,
-    bonusUsed,
-    bonusEarned: bonusEarned || 0,
-    loyaltyPhone: loyaltyUser ? loyaltyUser.phone : null,
+    loyaltyPhone,
     cashier: CASHIER_NAME,
     inn: INN,
     timestamp: Date.now(),
-    paymentMethod: 'card'
+    payment: 'card'
   };
+
+  const cartRef = db.ref('sessions/' + currentSessionId);
+  const snap = await cartRef.once('value');
+  if (snap.val() && snap.val().cart) {
+    receipt.items = snap.val().cart;
+  }
+
   await saveReceipt(receipt);
   renderReceipt(receipt);
   showScreen('screen-receipt');
 });
 
-// ~~~~~~~~~~~~~~~~~~~~~ ЧЕК ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 function renderReceipt(r) {
-  let html = `
-    <h2 style="text-align:center">КАССОВЫЙ ЧЕК</h2>
-    <p><strong>ИНН:</strong> ${r.inn}</p>
-    <p><strong>Кассир:</strong> ${r.cashier}</p><hr>
-  `;
+  let html = `<h2 style="text-align:center">КАССОВЫЙ ЧЕК</h2><p><strong>ИНН:</strong> ${r.inn}</p><p><strong>Кассир:</strong> ${r.cashier}</p><hr>`;
   r.items.forEach(i => {
-    html += `<p>${i.name} x${i.quantity} — ${i.price.toFixed(2)} ₽</p>`;
+    html += `<p>${i.name} — ${i.price.toFixed(2)} ₽</p>`;
   });
   html += `<hr><p><strong>ИТОГО:</strong> ${r.total.toFixed(2)} ₽</p>`;
-  if (r.bonusUsed > 0) {
-    html += `<p><strong>Списано бонусов:</strong> ${r.bonusUsed.toFixed(2)} ₽</p>`;
-    html += `<p><strong>К оплате:</strong> ${r.finalTotal.toFixed(2)} ₽</p>`;
-  }
   if (r.cashGiven !== undefined) {
     html += `<p><strong>Наличными:</strong> ${r.cashGiven.toFixed(2)} ₽</p>`;
     html += `<p><strong>Сдача:</strong> ${r.change.toFixed(2)} ₽</p>`;
-  }
-  if (r.bonusEarned > 0) {
-    html += `<p><strong>+ Бонусы начислены:</strong> ${r.bonusEarned.toFixed(2)} ₽</p>`;
   }
   html += `<p><strong>Дата:</strong> ${new Date(r.timestamp).toLocaleString('ru-RU')}</p>`;
   document.getElementById('receipt-content').innerHTML = html;
 }
 
-document.getElementById('btn-print').addEventListener('click', () => {
-  const content = document.getElementById('receipt-content').innerHTML;
-  const original = document.body.innerHTML;
-  document.body.innerHTML = content;
-  window.print();
-  document.body.innerHTML = original;
-  showScreen('screen-receipt');
+document.getElementById('btn-new-sale').addEventListener('click', () => {
+  currentSessionId = Date.now().toString();
+  loyaltyPhone = '';
+  document.getElementById('phone-loyalty').value = '';
+  document.getElementById('cart-display').classList.add('hidden');
+  document.getElementById('loyalty-section').classList.remove('hidden');
+  document.getElementById('cart-items').innerHTML = '';
+  document.getElementById('total').textContent = '0.00';
+  showScreen('screen-cashier');
 });
 
-document.getElementById('btn-new-sale').addEventListener('click', () => {
-  cart = []; loyaltyUser = null;
-  updateCartUI();
-  showScreen('screen-dashboard');
+// ~~~~~~~~~~~~~~~~~~~~~ ГЛАВНОЕ МЕНЮ ~~~~~~~~~~~~~~~~~~~~~~~~~
+document.addEventListener('keydown', (e) => {
+  // Ctrl+Shift → главное меню
+  if (e.ctrlKey && e.shiftKey) {
+    e.preventDefault();
+    showScreen('screen-main-menu');
+  }
+  // Клавиша 1 → продолжить обслуживание
+  if (e.key === '1') {
+    if (document.getElementById('screen-main-menu').classList.contains('hidden') === false) {
+      showScreen('screen-cashier');
+    }
+  }
+});
+
+// Главное меню
+document.getElementById('btn-generate').addEventListener('click', () => {
+  const list = document.getElementById('product-list');
+  list.innerHTML = '';
+  PRODUCTS.forEach(p => {
+    const btn = document.createElement('button');
+    btn.textContent = `${p.name} — ${p.price} ₽`;
+    btn.onclick = async () => {
+      const barcode = generateEAN13();
+      await addProductToDB(p, barcode);
+      JsBarcode("#barcode-svg", barcode, { format: "EAN13", height: 80 });
+      document.getElementById('barcode-text').textContent = barcode;
+      document.getElementById('generated-barcode').classList.remove('hidden');
+    };
+    list.appendChild(btn);
+  });
+  showScreen('screen-generate');
+});
+
+document.getElementById('btn-archive').addEventListener('click', async () => {
+  const receipts = await getReceipts();
+  const list = document.getElementById('archive-list');
+  list.innerHTML = '<h3>Архив</h3>';
+  receipts.reverse().forEach(r => {
+    const div = document.createElement('div');
+    div.className = 'archive-item';
+    div.innerHTML = `
+      <p><strong>${new Date(r.timestamp).toLocaleString('ru-RU')}</strong></p>
+      <p>Сумма: ${r.total.toFixed(2)} ₽</p>
+      ${r.loyaltyPhone ? `<p>Телефон: ${r.loyaltyPhone}</p>` : ''}
+    `;
+    list.appendChild(div);
+  });
+  showScreen('screen-archive');
+});
+
+document.getElementById('btn-logout').addEventListener('click', () => {
+  showScreen('screen-mode-select');
+});
+
+['back-from-generate', 'back-from-archive'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => showScreen('screen-main-menu'));
 });
 
 // ~~~~~~~~~~~~~~~~~~~~~ ИНИЦИАЛИЗАЦИЯ ~~~~~~~~~~~~~~~~~~~~~~~~
-window.onload = () => {
-  if (localStorage.getItem('auth') === 'true') {
-    showScreen('screen-dashboard');
-  } else {
-    showScreen('screen-login');
-  }
-  updateCartUI();
-};
-
-console.log("Касса Пятёрка: сканирование исправлено — только 13 цифр, без мусора.");
+showScreen('screen-mode-select');
 </script>
 </body>
 </html>
