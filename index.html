@@ -1,28 +1,27 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="utf-8"/>
-<title>POS с одноразовыми штрихкодами и QR оплатой</title>
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="UTF-8">
+<title>POS 2025 — Одноразовые штрихкоды и QR</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-/* Стили упрощены для читаемости */
 body{font-family:Arial,sans-serif;background:#f4f6f8;margin:0;padding:0;}
 .app{max-width:1200px;margin:20px auto;padding:16px;background:#fff;border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.06);}
 header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
 h1{font-size:18px;margin:0;}
 .muted{color:#6b7280;font-size:13px;}
-.top{display:flex;gap:12px;align-items:center;}
+.top{display:flex;gap:12px;align-items:center;margin-bottom:12px;}
 input,button{font-size:14px;padding:6px;border-radius:6px;border:1px solid #d1d5db;}
 button.btn{padding:8px 12px;border:0;background:#2563eb;color:#fff;cursor:pointer;}
 button.secondary{background:#6b7280;color:#fff;}
 .layout{display:flex;gap:16px;}
 .left{flex:2;}
 .right{flex:1;}
-.box{background:#fbfdff;padding:12px;border-radius:8px;border:1px solid #e6eef9;}
+.box{background:#fbfdff;padding:12px;border-radius:8px;border:1px solid #e6eef9;margin-bottom:12px;}
 table{width:100%;border-collapse:collapse;}
-td,th{padding:8px;border-bottom:1px dashed #e6eef9;}
-.receipt{white-space:pre-wrap;background:#fff;padding:10px;border-radius:6px;border:1px solid #eee;}
-.barcode-area{background:#fff;padding:12px;border-radius:6px;border:1px solid #ddd;text-align:center;}
+td,th{padding:8px;border-bottom:1px dashed #e6eef9;text-align:left;}
+.receipt{white-space:pre-wrap;background:#fff;padding:10px;border-radius:6px;border:1px solid #eee;min-height:120px;}
+.barcode-area{background:#fff;padding:12px;border-radius:6px;border:1px solid #ddd;text-align:center;margin-top:6px;}
 #barcode-svg{display:inline-block;padding:8px;background:#fff;}
 .modal-back{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9999;}
 .modal{width:90%;max-width:1000px;background:#fff;border-radius:8px;padding:12px;max-height:90vh;overflow:auto;}
@@ -34,6 +33,10 @@ td,th{padding:8px;border-bottom:1px dashed #e6eef9;}
 .flex-row{display:flex;gap:8px;align-items:center;}
 footer{margin-top:12px;color:#6b7280;font-size:13px;text-align:right;}
 .qr-area{margin-top:12px;text-align:center;}
+button.btn:hover{opacity:0.9;}
+button.secondary:hover{opacity:0.85;}
+input:focus{border-color:#2563eb;outline:none;}
+.product-card:active{transform:scale(0.98);transition:0.1s;}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
@@ -42,7 +45,7 @@ footer{margin-top:12px;color:#6b7280;font-size:13px;text-align:right;}
 <div class="app">
 <header>
   <div>
-    <h1>POS — одноразовые штрихкоды и QR</h1>
+    <h1>POS 2025 — Одноразовые штрихкоды и QR</h1>
     <div class="muted">Firebase URL: <span id="db-url-display"></span></div>
   </div>
   <div style="text-align:right">
@@ -50,27 +53,21 @@ footer{margin-top:12px;color:#6b7280;font-size:13px;text-align:right;}
     <div class="muted">ИНН: <strong id="company-inn">1234567890</strong></div>
   </div>
 </header>
-
-<div class="top" style="gap:12px">
+<div class="top">
   <input id="barcode-input" type="text" placeholder="Введите штрихкод / код товара и Enter" style="flex:1"/>
   <button id="btn-scan-sim" class="btn">Симулировать скан</button>
-  <button id="btn-upload-products" class="btn secondary">Upload products to Firebase</button>
   <div style="margin-left:8px">
     <label class="muted">Firebase URL:</label><br/>
     <input id="firebase-url" type="text" style="width:360px" value="https://renessans-bank-3df94-default-rtdb.europe-west1.firebasedatabase.app"/>
   </div>
 </div>
-
 <div class="layout">
   <div class="left">
     <div class="box">
       <h3>Справочник товаров</h3>
-      <div class="muted">Нажми F2 для генерации штрихкодов (пароль 0506) или используй поле ввода.</div>
+      <div class="muted">Нажми F2 для генерации штрихкодов (пароль 0506)</div>
       <div id="products-preview" style="margin-top:8px;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px"></div>
     </div>
-
-    <div style="height:12px"></div>
-
     <div class="box" id="cart-area">
       <h3>Корзина</h3>
       <div id="cart-list" class="muted">Корзина пуста</div>
@@ -80,10 +77,9 @@ footer{margin-top:12px;color:#6b7280;font-size:13px;text-align:right;}
       </div>
     </div>
   </div>
-
-  <div class="right">
+<div class="right">
     <div class="box">
-<h3>Действия / Чек</h3>
+      <h3>Действия / Чек</h3>
       <div style="margin-top:8px">
         <button id="btn-finalize-cash" class="btn">Наличные</button>
         <button id="btn-pay-qr" class="btn secondary">Оплатить по QR</button>
@@ -92,20 +88,15 @@ footer{margin-top:12px;color:#6b7280;font-size:13px;text-align:right;}
       <div style="margin-top:12px" id="receipt-content" class="receipt">Чек появится здесь</div>
       <div id="qr-display" class="qr-area"></div>
     </div>
-
-    <div style="height:12px"></div>
-
     <div class="box">
       <h3>Последний сгенерированный штрихкод</h3>
       <div id="last-barcode" class="barcode-area">Пока нет</div>
     </div>
   </div>
 </div>
-
 <footer>Пароль для страницы товаров (F2): <strong>0506</strong></footer>
 </div>
 
-<!-- Модал списка товаров -->
 <div id="modal-products" style="display:none">
   <div class="modal-back" id="modal-back">
     <div class="modal" role="dialog" aria-modal="true">
@@ -120,118 +111,111 @@ footer{margin-top:12px;color:#6b7280;font-size:13px;text-align:right;}
 </div>
 
 <script>
-// === Инициализация 200 товаров ===
-const PRODUCTS_DB = {};
+// ================== 200+ товары ==================
+const PRODUCTS_DB=[];
 for(let i=1;i<=200;i++){
-  const code = (4000000000000+i).toString();
-  PRODUCTS_DB[code] = { code, name: Товар №${i}, price: parseFloat((Math.random()*900+50).toFixed(2)) };
+  PRODUCTS_DB.push({
+    code:(4000000000000+i).toString(),
+    name:`Товар №${i}`,
+    price:parseFloat((Math.random()*900+50).toFixed(2)),
+    unit:'шт'
+  });
 }
 const cart=[];
+
+// ================== Корзина ==================
 function renderCart(){
   const wrap=document.getElementById('cart-list');
-  if(cart.length===0){wrap.innerHTML='<div class="muted">Корзина пуста</div>';document.getElementById('cart-total').textContent='0 ₽';return;}
+  if(cart.length===0){wrap.innerHTML='<div class="muted">Корзина пуста</div>'; document.getElementById('cart-total').textContent='0 ₽'; return;}
   let html='<table style="width:100%"><thead><tr><th>Товар</th><th>Кол-во</th><th>Сумма</th></tr></thead><tbody>';
-  let total=0; cart.forEach(it=>{const sum=it.qty*it.price; total+=sum; html+=`<tr><td>${it.name}</td><td>${it.qty}</td><td>${sum.toFixed(2)} ₽</td></tr>`;}); html+='</tbody></table>';
-  wrap.innerHTML=html; document.getElementById('cart-total').textContent=total.toFixed(2)+' ₽';
+  let total=0;
+  cart.forEach(it=>{
+    const sum=it.qty*it.price;
+    total+=sum;
+    html+=`<tr><td>${it.name}</td><td>${it.qty}</td><td>${sum.toFixed(2)} ₽</td></tr>`;
+  });
+  html+='</tbody></table>';
+  wrap.innerHTML=html;
+  document.getElementById('cart-total').textContent=total.toFixed(2)+' ₽';
 }
-function addToCart(product){ const found=cart.find(i=>i.code===product.code); if(found)found.qty++; else cart.push({...product,qty:1}); renderCart(); }
+function addToCart(product){
+  const found=cart.find(i=>i.code===product.code);
+  if(found) found.qty++; else cart.push({...product,qty:1});
+  renderCart();
+}
 
-// === Рендер превью товаров ===
-function renderProductsPreview(){
-  const wrap=document.getElementById('products-preview'); wrap.innerHTML='';
-  const codes=Object.keys(PRODUCTS_DB).slice(0,12);
-  codes.forEach(code=>{
-    const p=PRODUCTS_DB[code]; const el=document.createElement('div'); el.style.border='1px solid #e6eef9'; el.style.padding='8px'; el.style.borderRadius='6px'; el.style.background='#fff'; el.style.cursor='pointer';
-    el.innerHTML=`<div style="font-weight:700">${p.name}</div><div class="muted" style="font-size:12px">${p.code}</div><div style="margin-top:6px;font-weight:700">${p.price.toFixed(2)} ₽</div>`;
-    el.addEventListener('click',()=>openProductsModalAndHighlight(code));
-    wrap.appendChild(el);
+// ================== Модалка товаров ==================
+function renderProductsModal(){
+  const grid=document.getElementById('product-grid');
+  grid.innerHTML='';
+  PRODUCTS_DB.forEach(prod=>{
+    const div=document.createElement('div');
+    div.className='product-card';
+    div.innerHTML=`<div class="prod-title">${prod.name}</div><div class="prod-code">${prod.code}</div><div>${prod.price} ₽</div>`;
+    div.onclick=async ()=>{
+      const uniqueCode=prod.code+'-'+Date.now();
+      document.getElementById('last-barcode').innerHTML='';
+      const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+      JsBarcode(svg, uniqueCode,{format:"CODE128",width:2,height:40});
+      document.getElementById('last-barcode').appendChild(svg);
+      addToCart(prod);
+      alert(`Сгенерирован одноразовый штрихкод: ${uniqueCode}`);
+    };
+    grid.appendChild(div);
   });
 }
-renderProductsPreview();
+document.getElementById('btn-close-modal').onclick=()=>{document.getElementById('modal-products').style.display='none';};
 
-// === Firebase REST helper ===
-function firebaseBase(){let url=(document.getElementById('firebase-url').value||'https://renessans-bank-3df94-default-rtdb.europe-west1.firebasedatabase.app').trim(); if(url.endsWith('/'))url=url.slice(0,-1);return url;}
-async function fbPut(path,data){const base=firebaseBase(); const url=`${base}${path}.json`; const res=await fetch(url,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});return await res.json();}
-async function fbPatch(path,data){const base=firebaseBase(); const url=`${base}${path}.json`; const res=await fetch(url,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});return await res.json();}
-async function fbGet(path){const base=firebaseBase(); const url=`${base}${path}.json`; const res=await fetch(url); return await res.json();}
-
-// === Загрузка товаров ===
-document.
-getElementById('btn-upload-products').addEventListener('click',async ()=>{
-  if(!confirm('Загрузить 200 тестовых товаров в Firebase /products ?'))return;
-  const data={}; Object.keys(PRODUCTS_DB).forEach(code=>{const p=PRODUCTS_DB[code];data[code]={name:p.name,price:p.price};}); await fbPut('/products',data);
-  alert('200 товаров загружены в Firebase!');
+// ================== F2 открытие модалки ==================
+document.addEventListener('keydown',e=>{
+  if(e.key==='F2'){
+    const pwd=prompt('Введите пароль для списка товаров:');
+    if(pwd==='0506'){ document.getElementById('modal-products').style.display='block'; renderProductsModal();}
+    else alert('Неверный пароль!');
+  }
 });
 
-// === Модал генерации штрихкодов ===
-const modal=document.getElementById('modal-products');
-function openProductsModalAndHighlight(code){ modal.style.display='block'; loadProductGrid(code);}
-document.getElementById('btn-close-modal').addEventListener('click',()=>modal.style.display='none');
-document.getElementById('modal-back').addEventListener('click',e=>{if(e.target===modal)modal.style.display='none';});
+// ================== Сканирование ==================
+document.getElementById('barcode-input').addEventListener('keydown',e=>{
+  if(e.key==='Enter'){
+    const code=e.target.value.trim();
+    const prod=PRODUCTS_DB.find(p=>p.code===code);
+if(prod) addToCart(prod);
+    else alert('Товар не найден!');
+    e.target.value='';
+  }
+});
 
-// === Генерация штрихкодов ===
-async function loadProductGrid(highlightCode){
-  const wrap=document.getElementById('product-grid'); wrap.innerHTML='';
-  Object.values(PRODUCTS_DB).forEach(p=>{
-    const el=document.createElement('div'); el.className='product-card'; el.innerHTML=`<div class="prod-title">${p.name}</div><div class="prod-code">${p.code}</div><div class="barcode-area" id="barcode-${p.code}">---</div>`;
-    el.addEventListener('click',async ()=>{
-      const token=Math.random().toString(36).slice(2,10)+Date.now().toString(36); const bcId='barcode-'+p.code;
-      const used=false; await fbPut(`/barcodes/${p.code}/${token}`,{used,createdAt:Date.now()});
-      JsBarcode(`#${bcId}`,token,{format:"CODE128",displayValue:true,width:2,height:50});
-      document.getElementById('last-barcode').innerHTML=`<svg id="last-barcode-svg"></svg>`; JsBarcode("#last-barcode-svg",token,{format:"CODE128",displayValue:true,width:2,height:50});
-      alert(`Сгенерирован штрихкод для ${p.name}: ${token}`);
-    });
-    if(highlightCode && p.code===highlightCode) el.style.border='2px solid #2563eb';
-    wrap.appendChild(el);
-  });
-}
+// ================== Очистка корзины ==================
+document.getElementById('btn-clear-cart').onclick=()=>{cart.length=0; renderCart(); document.getElementById('receipt-content').innerHTML='Чек появится здесь';};
 
-// === Сканирование / ручной ввод ===
-document.getElementById('barcode-input').addEventListener('keydown',async e=>{if(e.key==='Enter'){scanBarcode(e.target.value); e.target.value='';}});
-document.getElementById('btn-scan-sim').addEventListener('click',()=>{const val=document.getElementById('barcode-input').value; if(val)scanBarcode(val);});
-async function scanBarcode(code){
-  const fbCode=await fbGet(`/barcodes/${code}`);
-  if(!fbCode){alert('Штрихкод не найден'); return;}
-  if(fbCode.used){alert('Штрихкод уже использован'); return;}
-  const prodCode=Object.keys(PRODUCTS_DB).find(c=>c===code || `/barcodes/${c}`); let product=null;
-  Object.keys(PRODUCTS_DB).forEach(c=>{if(PRODUCTS_DB[c].code===prodCode) product=PRODUCTS_DB[c];});
-  if(!product) {alert('Товар не найден'); return;}
-  addToCart(product);
-  await fbPatch(`/barcodes/${product.code}/${code}`,{used:true});
-}
-
-// === Оплата наличными ===
-document.getElementById('btn-finalize-cash').addEventListener('click',async ()=>{
-  const total=parseFloat(document.getElementById('cart-total').textContent.replace(' ₽','')||0);
-  const cashGiven=prompt(`Итого: ${total} ₽\nВведите сумму, которую дал клиент:`); 
-  if(cashGiven===null) return; const cash=parseFloat(cashGiven); if(isNaN(cash)||cash<total){alert('Недостаточно денег'); return;}
+// ================== Оплата наличными ==================
+document.getElementById('btn-finalize-cash').onclick=()=>{
+  if(cart.length===0){alert('Корзина пуста!'); return;}
+  const total=cart.reduce((sum,it)=>sum+it.qty*it.price,0);
+  const cash=parseFloat(prompt(`Итого ${total.toFixed(2)} ₽. Внесено:`));
+  if(isNaN(cash)||cash<total){alert('Недостаточно денег!'); return;}
   const change=(cash-total).toFixed(2);
-  const receipt={items:cart,total,finalTotal:total,paymentMethod:'cash',cashGiven:cash,change, timestamp:Date.now()};
-  renderReceipt(receipt); cart.length=0; renderCart();
-});
+  let receipt='=== Чек ===\n';
+  cart.forEach(it=>{receipt+=`${it.name} x${it.qty} = ${(it.qty*it.price).toFixed(2)} ₽\n`;});
+  receipt+=`ИТОГО: ${total.toFixed(2)} ₽\nНаличные: ${cash.toFixed(2)} ₽\nСдача: ${change} ₽\nДата: ${new Date().toLocaleString()}`;
+  document.getElementById('receipt-content').innerText=receipt;
+  cart.length=0; renderCart();
+};
 
-// === Оплата по QR ===
-document.getElementById('btn-pay-qr').addEventListener('click',async ()=>{
-  const total=parseFloat(document.getElementById('cart-total').textContent.replace(' ₽','')||0);
-  if(total<=0){alert('Корзина пуста'); return;}
-  const sessionId=Math.random().toString(36).slice(2,10)+Date.now().toString(36);
-  await fbPut(`/payments/${sessionId}`,{paid:false,amount:total});
-  const url=`https://renessans-bank.github.io/oplata/?sum=${total}&session=${sessionId}`;
-  const qrDiv=document.getElementById('qr-display'); qrDiv.innerHTML='';
-  QRCode.toCanvas(url,{width:200},(err,canvas)=>{if(err)alert(err); else qrDiv.appendChild(canvas);});
-alert('Покажите клиенту QR для оплаты');
-  // Опрашиваем Firebase каждые 3 сек
-  const interval=setInterval(async ()=>{
-    const status=await fbGet(`/payments/${sessionId}`);
-    if(status && status.paid){
-      clearInterval(interval);
-      alert('Оплачено ✅'); const receipt={items:cart,total,finalTotal:total,paymentMethod:'qr',cashGiven:null,change:0, timestamp:Date.now()}; renderReceipt(receipt); cart.length=0; renderCart(); qrDiv.innerHTML='';
-    }
-  },3000);
-});
-
-// === Рендер чека ===
-function renderReceipt(r){let html=`КАССОВЫЙ ЧЕК\n`; r.items.forEach(i=>html+=`${i.name} x${i.qty} = ${(i.price*i.qty).toFixed(2)} ₽\n`); html+=`ИТОГО: ${r.total.toFixed(2)} ₽\n`; if(r.cashGiven) html+=`Наличными: ${r.cashGiven.toFixed(2)} ₽\nСдача: ${r.change.toFixed(2)} ₽\n`; html+=`Дата: ${new Date(r.timestamp).toLocaleString('ru-RU')}\n`; document.getElementById('receipt-content').textContent=html;}
+// ================== Оплата QR ==================
+document.getElementById('btn-pay-qr').onclick=()=>{
+  if(cart.length===0){alert('Корзина пуста!'); return;}
+  const total=cart.reduce((sum,it)=>sum+it.qty*it.price,0);
+  const qrArea=document.getElementById('qr-display');
+  qrArea.innerHTML='';
+  const qrText=`https://renessans-bank.github.io/oplata/?sum=${total.toFixed(2)}`;
+  QRCode.toCanvas(qrText,{width:150},(err,canvas)=>{
+    if(err){alert(err); return;}
+    qrArea.appendChild(canvas);
+  });
+  alert(`QR для оплаты на сумму ${total.toFixed(2)} ₽ сгенерирован!`);
+};
 </script>
-</body>
 </html>
+
