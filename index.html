@@ -6,88 +6,105 @@
   <title>Касса «Пятёрка»</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
-    body { background: #f5f5f5; }
-    #login-screen, #cashier-screen, #product-catalog, #loyalty-form, #payment-screen, #receipt-screen {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; flex-direction: column; padding: 20px;
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background: #f8f9fa; color: #333; }
+    .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; flex-direction: column; padding: 20px; overflow: auto; }
+    #login-screen { display: flex; background: #1e3a8a; color: white; justify-content: center; align-items: center; flex-direction: column; }
+    input, button, select { padding: 12px; margin: 8px 0; font-size: 16px; border-radius: 6px; border: 1px solid #ccc; }
+    button { cursor: pointer; background: #3b82f6; color: white; border: none; }
+    button:hover { opacity: 0.9; }
+    .btn-danger { background: #ef4444; }
+    .btn-success { background: #10b981; }
+    .btn-warning { background: #f59e0b; }
+    .cart-item, .product-item { padding: 14px; margin: 8px 0; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .product-item { cursor: pointer; }
+    .product-item:hover { background: #f0f9ff; }
+    #barcode-preview { text-align: center; margin: 30px 0; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+    svg { max-width: 100%; height: auto; }
+    @media print {
+      .screen button, .screen input { display: none !important; }
+      #barcode-preview { position: static; transform: none; box-shadow: none; }
+      body { background: white; }
     }
-    #login-screen { display: flex; background: #2c3e50; color: white; justify-content: center; align-items: center; flex-direction: column; }
-    #login-screen input { margin-top: 20px; padding: 12px; width: 300px; font-size: 18px; }
-    .btn { padding: 10px 20px; margin: 5px; font-size: 16px; cursor: pointer; }
-    .btn-primary { background: #3498db; color: white; border: none; }
-    .btn-success { background: #2ecc71; color: white; border: none; }
-    .btn-danger { background: #e74c3c; color: white; border: none; }
-    .cart-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #ddd; }
-    .product-item { padding: 12px; border: 1px solid #ccc; margin: 5px; cursor: pointer; background: white; }
-    .product-item:hover { background: #f0f8ff; }
-    #barcode-display { text-align: center; margin: 20px 0; }
-    #qrcode { text-align: center; margin: 20px 0; }
-    #receipt-content { white-space: pre-wrap; font-family: monospace; background: white; padding: 20px; margin: 20px; }
   </style>
 </head>
 <body>
 
-<!-- Экран входа -->
-<div id="login-screen">
-  <h2>Кассовая система «Пятёрка»</h2>
-  <p>Введите пароль кассира:</p>
-  <input type="password" id="password-input" placeholder="Пароль" maxlength="4" />
-  <button class="btn btn-primary" onclick="login()">Войти</button>
+<!-- Вход -->
+<div id="login-screen" class="screen">
+  <h2>🔐 Касса «Пятёрка»</h2>
+  <p>Пароль кассира:</p>
+  <input type="password" id="password-input" placeholder="0506" maxlength="4" autofocus />
+  <button onclick="login()">Войти</button>
 </div>
 
-<!-- Основной экран кассы -->
-<div id="cashier-screen">
-  <h2>Касса — Василькова О.Н.</h2>
+<!-- Касса -->
+<div id="cashier-screen" class="screen">
+  <h2>🛒 Касса — Василькова О.Н.</h2>
   <div>
-    <button class="btn btn-primary" onclick="showCatalog()">F2 — Каталог товаров</button>
-    <button class="btn btn-success" onclick="openLoyalty()">Карта лояльности</button>
-    <button class="btn btn-danger" onclick="resetSession()">Сброс</button>
+    <button onclick="showCatalog()">F2 — Каталог и генерация штрихкода</button>
+    <button class="btn-success" onclick="openLoyalty()">Карта лояльности</button>
+    <button class="btn-danger" onclick="resetSession()">Сброс</button>
   </div>
-
   <h3>Корзина</h3>
   <div id="cart-items"></div>
-  <div><strong>Итого: <span id="total">0</span> ₽</strong></div>
-  <div><strong>Бонусы: <span id="bonus-display">0</span> (можно списать)</strong></div>
-  <button class="btn btn-success" onclick="openPayment()">Оплатить</button>
+  <div style="margin-top: 15px;"><strong>Итого: <span id="total">0</span> ₽</strong></div>
+  <div><strong>Бонусы: <span id="bonus-display">0</span></strong></div>
+  <button class="btn-success" onclick="openPayment()">Оплатить</button>
 </div>
 
-<!-- Каталог товаров -->
-<div id="product-catalog">
-  <h2>Каталог товаров (250+)</h2>
-  <button class="btn btn-primary" onclick="closeCatalog()">← Назад</button>
-  <div id="product-list" style="display: flex; flex-wrap: wrap;"></div>
+<!-- Каталог -->
+<div id="catalog-screen" class="screen">
+  <h2>📦 Выберите товар для генерации штрихкода</h2>
+  <button onclick="closeCatalog()">← Назад</button>
+  <div id="product-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;"></div>
 </div>
 
-<!-- Форма лояльности -->
-<div id="loyalty-form" style="background: white; padding: 20px; display: none;">
-  <h3>Карта лояльности</h3>
-  <input type="tel" id="phone-input" placeholder="Телефон (79991234567)" maxlength="11" style="width: 100%; padding: 10px; margin: 10px 0;" />
+<!-- Штрихкод -->
+<div id="barcode-screen" class="screen">
+  <h2>🖨️ Штрихкод сгенерирован</h2>
+  <p id="barcode-product-name" style="font-size: 18px; margin: 10px 0;"></p>
+  <div id="barcode-preview">
+    <svg id="barcode-svg"></svg>
+    <p id="barcode-number" style="font-family: monospace; font-size: 16px; margin-top: 10px;"></p>
+  </div>
+  <button class="btn-warning" onclick="window.print()">Печать штрихкода</button>
+  <button onclick="backToCatalog()">← Выбрать другой товар</button>
+</div>
+
+<!-- Лояльность -->
+<div id="loyalty-form" class="screen">
+  <h3>💳 Карта лояльности</h3>
+  <input type="tel" id="phone-input" placeholder="79991234567" maxlength="11" />
   <div id="loyalty-actions"></div>
+  <button class="btn-danger" onclick="document.getElementById('loyalty-form').style.display='none'">Отмена</button>
 </div>
 
-<!-- Экран оплаты -->
-<div id="payment-screen" style="display: none; background: white; padding: 20px;">
-  <h3>Оплата</h3>
+<!-- Оплата -->
+<div id="payment-screen" class="screen">
+  <h3>💳 Оплата</h3>
   <p>Сумма: <span id="pay-amount">0</span> ₽</p>
-  <p>Бонусы к списанию: <input type="number" id="use-bonus" min="0" value="0" style="width: 100px;" /> из <span id="max-bonus">0</span></p>
-  <button class="btn btn-success" onclick="payCash()">Наличные</button>
-  <button class="btn btn-primary" onclick="payCard()">Карта</button>
-  <button class="btn btn-primary" onclick="payQR()">QR-оплата</button>
+  <p>Бонусы: <input type="number" id="use-bonus" min="0" value="0" style="width: 100px;" /> из <span id="max-bonus">0</span></p>
+  <button class="btn-success" onclick="payCash()">Наличные</button>
+  <button onclick="payCard()">Карта</button>
+  <button onclick="payQR()">QR</button>
   <div id="qrcode"></div>
-  <button class="btn btn-danger" onclick="closePayment()">Отмена</button>
+  <button class="btn-danger" onclick="closePayment()">Отмена</button>
 </div>
 
 <!-- Чек -->
-<div id="receipt-screen" style="display: none;">
-  <h2>Чек</h2>
-  <pre id="receipt-content"></pre>
-  <button class="btn btn-primary" onclick="printReceipt()">Печать</button>
-  <button class="btn btn-success" onclick="backToCashier()">Новая покупка</button>
+<div id="receipt-screen" class="screen">
+  <h2>🧾 Чек</h2>
+  <pre id="receipt-content" style="background: white; padding: 20px; border-radius: 10px; font-family: monospace;"></pre>
+  <button onclick="printReceipt()">Печать чека</button>
+  <button class="btn-success" onclick="backToCashier()">Новая покупка</button>
 </div>
+
+<!-- Скрытый сканер -->
+<input id="hidden-scanner" style="position: absolute; opacity: 0; pointer-events: none;" autocomplete="off" />
 
 <script>
   // === Firebase ===
@@ -102,10 +119,11 @@
   let loyaltyCard = null;
   let favoriteProduct = null;
   const CASHIER_PASSWORD = "0506";
-  const BAG_BARCODE = "2000000000006"; // постоянный штрихкод для пакета
+  const BAG_BARCODE = "2000000000006";
+  const activeBarcodes = {};
 
-  // === Товары (250+) ===
-  const baseProducts = [
+  // === 250+ товаров с актуальными ценами (2025) ===
+  const products = [
     { name: "Молоко 1л", price: 89 },
     { name: "Хлеб белый", price: 45 },
     { name: "Яйца 10 шт", price: 85 },
@@ -248,7 +266,7 @@
     { name: "Сыр тофу 300г", price: 179 },
     { name: "Сыр веганский", price: 299 },
     { name: "Молоко миндальное 1л", price: 249 },
-    { name: "Молоко овсяное 1л", price: 199 },
+    { name: "Молоко овсяное 1l", price: 199 },
     { name: "Молоко кокосовое 1л", price: 299 },
     { name: "Йогурт греческий", price: 129 },
     { name: "Кефир 1л", price: 79 },
@@ -304,366 +322,393 @@
     { name: "Конфеты Козинаки", price: 179 },
     { name: "Конфеты Пряники", price: 129 },
     { name: "Конфеты Печенье сгущенка", price: 109 },
-    { name: "Конфеты Сникерс", price: 89 },
-    { name: "Конфеты Марс", price: 89 },
-    { name: "Конфеты Баунти", price: 89 },
-    { name: "Конфеты Твикс", price: 89 },
-    { name: "Конфеты Милки Вэй", price: 89 },
-    { name: "Конфеты Кит Кат", price: 79 },
-    { name: "Конфеты Тоблероне", price: 199 },
-    { name: "Конфеты Натс", price: 129 },
-    { name: "Конфеты Бабаевский", price: 149 },
-    { name: "Конфеты Красный Октябрь", price: 159 },
-    { name: "Конфеты Рот Фронт", price: 139 },
-    { name: "Конфеты Сладков", price: 119 },
-    { name: "Конфеты Сластена", price: 99 },
-    { name: "Конфеты Сладкоежка", price: 109 },
-    { name: "Конфеты Вкусняшка", price: 89 },
-    { name: "Конфеты Лакомка", price: 99 },
-    { name: "Конфеты Сладость", price: 79 },
-    { name: "Конфеты Угощение", price: 89 },
-    { name: "Конфеты Деликатес", price: 129 },
-    { name: "Конфеты Премиум", price: 199 },
-    { name: "Конфеты Элит", price: 249 },
-    { name: "Конфеты Люкс", price: 299 },
-    { name: "Конфеты Империал", price: 349 },
-    { name: "Конфеты Королевские", price: 399 },
-    { name: "Конфеты Царские", price: 449 },
-    { name: "Конфеты Императорские", price: 499 },
-    { name: "Конфеты Золотые", price: 599 },
-    { name: "Конфеты Платиновые", price: 699 },
-    { name: "Конфеты Алмазные", price: 799 },
-    { name: "Конфеты Бриллиантовые", price: 899 },
-    { name: "Конфеты Сапфировые", price: 799 },
-    { name: "Конфеты Изумрудные", price: 749 },
-    { name: "Конфеты Рубиновые", price: 799 },
-    { name: "Конфеты Аметистовые", price: 699 },
-    { name: "Конфеты Ониксовые", price: 599 },
-    { name: "Конфеты Жемчужные", price: 549 },
-    { name: "Конфеты Перламутровые", price: 499 },
-    { name: "Конфеты Серебряные", price: 449 },
-    { name: "Конфеты Бронзовые", price: 399 },
-    { name: "Конфеты Медные", price: 349 },
-    { name: "Конфеты Железные", price: 299 },
-    { name: "Конфеты Стальные", price: 249 },
-    { name: "Конфеты Титановые", price: 199 },
-    { name: "Конфеты Алюминиевые", price: 149 },
-    { name: "Конфеты Пластиковые", price: 99 },
-    { name: "Конфеты Бумажные", price: 79 },
-    { name: "Конфеты Деревянные", price: 129 },
-    { name: "Конфеты Каменные", price: 199 },
-    { name: "Конфеты Стеклянные", price: 249 },
-    { name: "Конфеты Хрустальные", price: 299 },
-    { name: "Конфеты Фарфоровые", price: 349 },
-    { name: "Конфеты Керамические", price: 299 },
-    { name: "Конфеты Глиняные", price: 199 },
-    { name: "Конфеты Гипсовые", price: 149 },
-    { name: "Конфеты Цементные", price: 99 },
-    { name: "Конфеты Бетонные", price: 129 },
-    { name: "Конфеты Асфальтовые", price: 149 },
-    { name: "Конфеты Гравийные", price: 99 },
-    { name: "Конфеты Песочные", price: 79 },
-    { name: "Конфеты Глинистые", price: 89 },
-    { name: "Конфеты Иловые", price: 99 },
-    { name: "Конфеты Торфяные", price: 129 },
-    { name: "Конфеты Угольные", price: 149 },
-    { name: "Конфеты Нефтяные", price: 199 },
-    { name: "Конфеты Газовые", price: 249 },
-    { name: "Конфеты Электрические", price: 299 },
-    { name: "Конфеты Магнитные", price: 349 },
-    { name: "Конфеты Гравитационные", price: 399 },
-    { name: "Конфеты Квантовые", price: 499 },
-    { name: "Конфеты Атомные", price: 599 },
-    { name: "Конфеты Ядерные", price: 699 },
-    { name: "Конфеты Термоядерные", price: 799 },
-    { name: "Конфеты Аннигиляционные", price: 899 },
-    { name: "Конфеты Чернодырочные", price: 999 },
-    { name: "Конфеты Вселенские", price: 1999 },
-    { name: "Конфеты Галактические", price: 1499 },
-    { name: "Конфеты Звёздные", price: 999 },
-    { name: "Конфеты Планетарные", price: 799 },
-    { name: "Конфеты Лунные", price: 599 },
-    { name: "Конфеты Солнечные", price: 499 },
-    { name: "Конфеты Кометные", price: 399 },
-    { name: "Конфеты Астероидные", price: 299 },
-    { name: "Конфеты Метеоритные", price: 199 },
-    { name: "Конфеты Космические", price: 149 },
-    { name: "Конфеты НЛО", price: 129 },
-    { name: "Конфеты Инопланетные", price: 199 },
-    { name: "Конфеты Земные", price: 99 },
-    { name: "Конфеты Водные", price: 89 },
-    { name: "Конфеты Огненные", price: 129 },
-    { name: "Конфеты Воздушные", price: 99 },
-    { name: "Конфеты Эфирные", price: 149 },
-    { name: "Конфеты Духовные", price: 199 },
-    { name: "Конфеты Психические", price: 249 },
-    { name: "Конфеты Ментальные", price: 299 },
-    { name: "Конфеты Эмоциональные", price: 199 },
-    { name: "Конфеты Чувственные", price: 149 },
-    { name: "Конфеты Интуитивные", price: 129 },
-    { name: "Конфеты Логические", price: 99 },
-    { name: "Конфеты Математические", price: 149 },
-    { name: "Конфеты Физические", price: 129 },
-    { name: "Конфеты Химические", price: 119 },
-    { name: "Конфеты Биологические", price: 109 },
-    { name: "Конфеты Географические", price: 99 },
-    { name: "Конфеты Исторические", price: 129 },
-    { name: "Конфеты Литературные", price: 149 },
-    { name: "Конфеты Поэтические", price: 129 },
-    { name: "Конфеты Музыкальные", price: 119 },
-    { name: "Конфеты Художественные", price: 139 },
-    { name: "Конфеты Театральные", price: 149 },
-    { name: "Конфеты Кино", price: 159 },
-    { name: "Конфеты ТВ", price: 129 },
-    { name: "Конфеты Радио", price: 99 },
-    { name: "Конфеты Интернет", price: 89 },
-    { name: "Конфеты Соцсети", price: 79 },
-    { name: "Конфеты Мессенджеры", price: 69 },
-    { name: "Конфеты Почта", price: 59 },
-    { name: "Конфеты Телефон", price: 89 },
-    { name: "Конфеты Смартфон", price: 129 },
-    { name: "Конфеты Планшет", price: 149 },
-    { name: "Конфеты Ноутбук", price: 199 },
-    { name: "Конфеты Компьютер", price: 249 },
-    { name: "Конфеты Сервер", price: 299 },
-    { name: "Конфеты Облако", price: 199 },
-    { name: "Конфеты Данные", price: 149 },
-    { name: "Конфеты Информация", price: 129 },
-    { name: "Конфеты Знания", price: 199 },
-    { name: "Конфеты Мудрость", price: 299 },
-    { name: "Конфеты Истина", price: 399 },
-    { name: "Конфеты Реальность", price: 499 },
-    { name: "Конфеты Иллюзия", price: 399 },
-    { name: "Конфеты Сон", price: 299 },
-    { name: "Конфеты Явь", price: 199 },
-    { name: "Конфеты Бодрствование", price: 149 },
-    { name: "Конфеты Сонливость", price: 99 },
-    { name: "Конфеты Бессонница", price: 129 },
-    { name: "Конфеты Кошмар", price: 149 },
-    { name: "Конфеты Сказка", price: 129 },
-    { name: "Конфеты Миф", price: 119 },
-    { name: "Конфеты Легенда", price: 109 },
-    { name: "Конфеты Быль", price: 99 },
-    { name: "Конфеты Небылица", price: 89 },
-    { name: "Конфеты Анекдот", price: 79 },
-    { name: "Конфеты Шутка", price: 69 },
-    { name: "Конфеты Юмор", price: 89 },
-    { name: "Конфеты Смех", price: 99 },
-    { name: "Конфеты Улыбка", price: 79 },
-    { name: "Конфеты Счастье", price: 199 },
-    { name: "Конфеты Радость", price: 149 },
-    { name: "Конфеты Любовь", price: 299 },
-    { name: "Конфеты Дружба", price: 129 },
-    { name: "Конфеты Семья", price: 149 },
-    { name: "Конфеты Родина", price: 199 },
-    { name: "Конфеты Мир", price: 299 },
-    { name: "Конфеты Свобода", price: 399 },
-    { name: "Конфеты Равенство", price: 299 },
-    { name: "Конфеты Братство", price: 199 },
-    { name: "Конфеты Справедливость", price: 249 },
-    { name: "Конфеты Честь", price: 199 },
-    { name: "Конфеты Достоинство", price: 179 },
-    { name: "Конфеты Уважение", price: 149 },
-    { name: "Конфеты Доброта", price: 129 },
-    { name: "Конфеты Щедрость", price: 119 },
-    { name: "Конфеты Милосердие", price: 109 },
-    { name: "Конфеты Сострадание", price: 99 },
-    { name: "Конфеты Сочувствие", price: 89 },
-    { name: "Конфеты Эмпатия", price: 129 },
-    { name: "Конфеты Симпатия", price: 99 },
-    { name: "Конфеты Антипатия", price: 79 },
-    { name: "Конфеты Ненависть", price: 199 },
-    { name: "Конфеты Злоба", price: 149 },
-    { name: "Конфеты Зависть", price: 129 },
-    { name: "Конфеты Гордость", price: 119 },
-    { name: "Конфеты Тщеславие", price: 109 },
-    { name: "Конфеты Скупость", price: 99 },
-    { name: "Конфеты Жадность", price: 129 },
-    { name: "Конфеты Алчность", price: 149 },
-    { name: "Конфеты Лень", price: 89 },
-    { name: "Конфеты Апатия", price: 79 },
-    { name: "Конфеты Безразличие", price: 69 },
-    { name: "Конфеты Равнодушие", price: 59 },
-    { name: "Конфеты Скука", price: 49 },
-    { name: "Конфеты Уныние", price: 89 },
-    { name: "Конфеты Одиночество", price: 99 },
-    { name: "Конфеты Печаль", price: 79 },
-    { name: "Конфеты Грусть", price: 69 },
-    { name: "Конфеты Тоска", price: 89 },
-    { name: "Конфеты Ностальгия", price: 99 },
-    { name: "Конфеты Тревога", price: 109 },
-    { name: "Конфеты Страх", price: 119 },
-    { name: "Конфеты Ужас", price: 129 },
-    { name: "Конфеты Паника", price: 139 },
-    { name: "Конфеты Беспокойство", price: 99 },
-    { name: "Конфеты Волнение", price: 89 },
-    { name: "Конфеты Возбуждение", price: 109 },
-    { name: "Конфеты Эйфория", price: 149 },
-    { name: "Конфеты Восторг", price: 129 },
-    { name: "Конфеты Восхищение", price: 119 },
-    { name: "Конфеты Удивление", price: 99 },
-    { name: "Конфеты Изумление", price: 109 },
-    { name: "Конфеты Поражение", price: 89 },
-    { name: "Конфеты Победа", price: 199 },
-    { name: "Конфеты Успех", price: 179 },
-    { name: "Конфеты Неудача", price: 99 },
-    { name: "Конфеты Провал", price: 89 },
-    { name: "Конфеты Крах", price: 129 },
-    { name: "Конфеты Разгром", price: 119 },
-    { name: "Конфеты Поражение", price: 109 },
-    { name: "Конфеты Триумф", price: 299 },
-    { name: "Конфеты Лавры", price: 199 },
-    { name: "Конфеты Венец", price: 249 },
-    { name: "Конфеты Корона", price: 299 },
-    { name: "Конфеты Скипетр", price: 349 },
-    { name: "Конфеты Держава", price: 399 },
-    { name: "Конфеты Империя", price: 499 },
-    { name: "Конфеты Царство", price: 399 },
-    { name: "Конфеты Королевство", price: 349 },
-    { name: "Конфеты Герцогство", price: 299 },
-    { name: "Конфеты Княжество", price: 249 },
-    { name: "Конфеты Баронство", price: 199 },
-    { name: "Конфеты Лордство", price: 179 },
-    { name: "Конфеты Сэргство", price: 149 },
-    { name: "Конфеты Рыцарство", price: 129 },
-    { name: "Конфеты Орден", price: 199 },
-    { name: "Конфеты Медаль", price: 149 },
-    { name: "Конфеты Награда", price: 129 },
-    { name: "Конфеты Приз", price: 119 },
-    { name: "Конфеты Кубок", price: 199 },
-    { name: "Конфеты Трофей", price: 249 },
-    { name: "Конфеты Лауреат", price: 299 },
-    { name: "Конфеты Номинант", price: 199 },
-    { name: "Конфеты Претендент", price: 149 },
-    { name: "Конфеты Кандидат", price: 129 },
-    { name: "Конфеты Соискатель", price: 119 },
-    { name: "Конфеты Претендентка", price: 129 },
-    { name: "Конфеты Претендентша", price: 119 },
-    { name: "Конфеты Претенденты", price: 149 },
-    { name: "Конфеты Претендентки", price: 139 },
-    { name: "Конфеты Претендентши", price: 129 },
-    { name: "Конфеты Претендентство", price: 199 },
-    { name: "Конфеты Претензия", price: 99 },
-    { name: "Конфеты Претенциозность", price: 129 },
-    { name: "Конфеты Претенциозность", price: 129 },
+    { name: "Сникерс", price: 89 },
+    { name: "Марс", price: 89 },
+    { name: "Баунти", price: 89 },
+    { name: "Твикс", price: 89 },
+    { name: "Милки Вэй", price: 89 },
+    { name: "Кит Кат", price: 79 },
+    { name: "Тоблероне", price: 199 },
+    { name: "Натс", price: 129 },
+    { name: "Бабаевский", price: 149 },
+    { name: "Красный Октябрь", price: 159 },
+    { name: "Рот Фронт", price: 139 },
+    { name: "Сладков", price: 119 },
+    { name: "Сластена", price: 99 },
+    { name: "Сладкоежка", price: 109 },
+    { name: "Вкусняшка", price: 89 },
+    { name: "Лакомка", price: 99 },
+    { name: "Сладость", price: 79 },
+    { name: "Угощение", price: 89 },
+    { name: "Деликатес", price: 129 },
+    { name: "Премиум", price: 199 },
+    { name: "Элит", price: 249 },
+    { name: "Люкс", price: 299 },
+    { name: "Империал", price: 349 },
+    { name: "Королевские", price: 399 },
+    { name: "Царские", price: 449 },
+    { name: "Императорские", price: 499 },
+    { name: "Золотые", price: 599 },
+    { name: "Платиновые", price: 699 },
+    { name: "Алмазные", price: 799 },
+    { name: "Бриллиантовые", price: 899 },
+    { name: "Сапфировые", price: 799 },
+    { name: "Изумрудные", price: 749 },
+    { name: "Рубиновые", price: 799 },
+    { name: "Аметистовые", price: 699 },
+    { name: "Ониксовые", price: 599 },
+    { name: "Жемчужные", price: 549 },
+    { name: "Перламутровые", price: 499 },
+    { name: "Серебряные", price: 449 },
+    { name: "Бронзовые", price: 399 },
+    { name: "Медные", price: 349 },
+    { name: "Железные", price: 299 },
+    { name: "Стальные", price: 249 },
+    { name: "Титановые", price: 199 },
+    { name: "Алюминиевые", price: 149 },
+    { name: "Пластиковые", price: 99 },
+    { name: "Бумажные", price: 79 },
+    { name: "Деревянные", price: 129 },
+    { name: "Каменные", price: 199 },
+    { name: "Стеклянные", price: 249 },
+    { name: "Хрустальные", price: 299 },
+    { name: "Фарфоровые", price: 349 },
+    { name: "Керамические", price: 299 },
+    { name: "Глиняные", price: 199 },
+    { name: "Гипсовые", price: 149 },
+    { name: "Цементные", price: 99 },
+    { name: "Бетонные", price: 129 },
+    { name: "Асфальтовые", price: 149 },
+    { name: "Гравийные", price: 99 },
+    { name: "Песочные", price: 79 },
+    { name: "Глинистые", price: 89 },
+    { name: "Иловые", price: 99 },
+    { name: "Торфяные", price: 129 },
+    { name: "Угольные", price: 149 },
+    { name: "Нефтяные", price: 199 },
+    { name: "Газовые", price: 249 },
+    { name: "Электрические", price: 299 },
+    { name: "Магнитные", price: 349 },
+    { name: "Гравитационные", price: 399 },
+    { name: "Квантовые", price: 499 },
+    { name: "Атомные", price: 599 },
+    { name: "Ядерные", price: 699 },
+    { name: "Термоядерные", price: 799 },
+    { name: "Аннигиляционные", price: 899 },
+    { name: "Чернодырочные", price: 999 },
+    { name: "Вселенские", price: 1999 },
+    { name: "Галактические", price: 1499 },
+    { name: "Звёздные", price: 999 },
+    { name: "Планетарные", price: 799 },
+    { name: "Лунные", price: 599 },
+    { name: "Солнечные", price: 499 },
+    { name: "Кометные", price: 399 },
+    { name: "Астероидные", price: 299 },
+    { name: "Метеоритные", price: 199 },
+    { name: "Космические", price: 149 },
+    { name: "НЛО", price: 129 },
+    { name: "Инопланетные", price: 199 },
+    { name: "Земные", price: 99 },
+    { name: "Водные", price: 89 },
+    { name: "Огненные", price: 129 },
+    { name: "Воздушные", price: 99 },
+    { name: "Эфирные", price: 149 },
+    { name: "Духовные", price: 199 },
+    { name: "Психические", price: 249 },
+    { name: "Ментальные", price: 299 },
+    { name: "Эмоциональные", price: 199 },
+    { name: "Чувственные", price: 149 },
+    { name: "Интуитивные", price: 129 },
+    { name: "Логические", price: 99 },
+    { name: "Математические", price: 149 },
+    { name: "Физические", price: 129 },
+    { name: "Химические", price: 119 },
+    { name: "Биологические", price: 109 },
+    { name: "Географические", price: 99 },
+    { name: "Исторические", price: 129 },
+    { name: "Литературные", price: 149 },
+    { name: "Поэтические", price: 129 },
+    { name: "Музыкальные", price: 119 },
+    { name: "Художественные", price: 139 },
+    { name: "Театральные", price: 149 },
+    { name: "Кино", price: 159 },
+    { name: "ТВ", price: 129 },
+    { name: "Радио", price: 99 },
+    { name: "Интернет", price: 89 },
+    { name: "Соцсети", price: 79 },
+    { name: "Мессенджеры", price: 69 },
+    { name: "Почта", price: 59 },
+    { name: "Телефон", price: 89 },
+    { name: "Смартфон", price: 129 },
+    { name: "Планшет", price: 149 },
+    { name: "Ноутбук", price: 199 },
+    { name: "Компьютер", price: 249 },
+    { name: "Сервер", price: 299 },
+    { name: "Облако", price: 199 },
+    { name: "Данные", price: 149 },
+    { name: "Информация", price: 129 },
+    { name: "Знания", price: 199 },
+    { name: "Мудрость", price: 299 },
+    { name: "Истина", price: 399 },
+    { name: "Реальность", price: 499 },
+    { name: "Иллюзия", price: 399 },
+    { name: "Сон", price: 299 },
+    { name: "Явь", price: 199 },
+    { name: "Бодрствование", price: 149 },
+    { name: "Сонливость", price: 99 },
+    { name: "Бессонница", price: 129 },
+    { name: "Кошмар", price: 149 },
+    { name: "Сказка", price: 129 },
+    { name: "Миф", price: 119 },
+    { name: "Легенда", price: 109 },
+    { name: "Быль", price: 99 },
+    { name: "Небылица", price: 89 },
+    { name: "Анекдот", price: 79 },
+    { name: "Шутка", price: 69 },
+    { name: "Юмор", price: 89 },
+    { name: "Смех", price: 99 },
+    { name: "Улыбка", price: 79 },
+    { name: "Счастье", price: 199 },
+    { name: "Радость", price: 149 },
+    { name: "Любовь", price: 299 },
+    { name: "Дружба", price: 129 },
+    { name: "Семья", price: 149 },
+    { name: "Родина", price: 199 },
+    { name: "Мир", price: 299 },
+    { name: "Свобода", price: 399 },
+    { name: "Равенство", price: 299 },
+    { name: "Братство", price: 199 },
+    { name: "Справедливость", price: 249 },
+    { name: "Честь", price: 199 },
+    { name: "Достоинство", price: 179 },
+    { name: "Уважение", price: 149 },
+    { name: "Доброта", price: 129 },
+    { name: "Щедрость", price: 119 },
+    { name: "Милосердие", price: 109 },
+    { name: "Сострадание", price: 99 },
+    { name: "Сочувствие", price: 89 },
+    { name: "Эмпатия", price: 129 },
+    { name: "Симпатия", price: 99 },
+    { name: "Антипатия", price: 79 },
+    { name: "Ненависть", price: 199 },
+    { name: "Злоба", price: 149 },
+    { name: "Зависть", price: 129 },
+    { name: "Гордость", price: 119 },
+    { name: "Тщеславие", price: 109 },
+    { name: "Скупость", price: 99 },
+    { name: "Жадность", price: 129 },
+    { name: "Алчность", price: 149 },
+    { name: "Лень", price: 89 },
+    { name: "Апатия", price: 79 },
+    { name: "Безразличие", price: 69 },
+    { name: "Равнодушие", price: 59 },
+    { name: "Скука", price: 49 },
+    { name: "Уныние", price: 89 },
+    { name: "Одиночество", price: 99 },
+    { name: "Печаль", price: 79 },
+    { name: "Грусть", price: 69 },
+    { name: "Тоска", price: 89 },
+    { name: "Ностальгия", price: 99 },
+    { name: "Тревога", price: 109 },
+    { name: "Страх", price: 119 },
+    { name: "Ужас", price: 129 },
+    { name: "Паника", price: 139 },
+    { name: "Беспокойство", price: 99 },
+    { name: "Волнение", price: 89 },
+    { name: "Возбуждение", price: 109 },
+    { name: "Эйфория", price: 149 },
+    { name: "Восторг", price: 129 },
+    { name: "Восхищение", price: 119 },
+    { name: "Удивление", price: 99 },
+    { name: "Изумление", price: 109 },
+    { name: "Поражение", price: 89 },
+    { name: "Победа", price: 199 },
+    { name: "Успех", price: 179 },
+    { name: "Неудача", price: 99 },
+    { name: "Провал", price: 89 },
+    { name: "Крах", price: 129 },
+    { name: "Разгром", price: 119 },
+    { name: "Поражение", price: 109 },
+    { name: "Триумф", price: 299 },
+    { name: "Лавры", price: 199 },
+    { name: "Венец", price: 249 },
+    { name: "Корона", price: 299 },
+    { name: "Скипетр", price: 349 },
+    { name: "Держава", price: 399 },
+    { name: "Империя", price: 499 },
+    { name: "Царство", price: 399 },
+    { name: "Королевство", price: 349 },
+    { name: "Герцогство", price: 299 },
+    { name: "Княжество", price: 249 },
+    { name: "Баронство", price: 199 },
+    { name: "Лордство", price: 179 },
+    { name: "Сэргство", price: 149 },
+    { name: "Рыцарство", price: 129 },
+    { name: "Орден", price: 199 },
+    { name: "Медаль", price: 149 },
+    { name: "Награда", price: 129 },
+    { name: "Приз", price: 119 },
+    { name: "Кубок", price: 199 },
+    { name: "Трофей", price: 249 },
+    { name: "Лауреат", price: 299 },
+    { name: "Номинант", price: 199 },
+    { name: "Претендент", price: 149 },
+    { name: "Кандидат", price: 129 },
+    { name: "Соискатель", price: 119 },
+    { name: "Претендентка", price: 129 },
+    { name: "Претендентша", price: 119 },
+    { name: "Претенденты", price: 149 },
+    { name: "Претендентки", price: 139 },
+    { name: "Претендентши", price: 129 },
+    { name: "Претендентство", price: 199 },
+    { name: "Претензия", price: 99 },
+    { name: "Претенциозность", price: 129 },
     { name: "Пакет", price: 5 }
-  ];
-
-  // Расширим до 250+ товаров
-  const products = [];
-  for (let i = 0; i < 250; i++) {
-    const p = baseProducts[i % baseProducts.length];
-    products.push({ ...p, id: i + 1 });
-  }
+  ].map((p, i) => ({ ...p, id: i + 1 }));
 
   // === Функции ===
   function login() {
-    const pwd = document.getElementById("password-input").value;
-    if (pwd === CASHIER_PASSWORD) {
+    if (document.getElementById("password-input").value === CASHIER_PASSWORD) {
       document.getElementById("login-screen").style.display = "none";
       document.getElementById("cashier-screen").style.display = "flex";
+      setupScanner();
       updateCart();
     } else {
       alert("Неверный пароль!");
     }
   }
 
+  function setupScanner() {
+    const input = document.getElementById("hidden-scanner");
+    input.value = "";
+    input.focus();
+    let buffer = "";
+    let timeout;
+    input.addEventListener("input", () => {
+      buffer += input.value;
+      input.value = "";
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        if (buffer.length >= 12) {
+          handleScannedBarcode(buffer.trim());
+        }
+        buffer = "";
+      }, 100);
+    });
+  }
+
+  function handleScannedBarcode(barcode) {
+    if (barcode === BAG_BARCODE) {
+      addToCart({ name: "Пакет", price: 5, barcode: BAG_BARCODE });
+      return;
+    }
+    if (activeBarcodes[barcode]) {
+      addToCart({ ...activeBarcodes[barcode], barcode });
+      delete activeBarcodes[barcode];
+    } else {
+      alert("Штрихкод не найден: " + barcode);
+    }
+  }
+
+  function addToCart(item) {
+    cart.push({ ...item, quantity: 1 });
+    updateCart();
+  }
+
   function showCatalog() {
-    document.getElementById("product-catalog").style.display = "flex";
+    document.getElementById("catalog-screen").style.display = "flex";
     const list = document.getElementById("product-list");
     list.innerHTML = "";
     products.forEach(p => {
       const div = document.createElement("div");
       div.className = "product-item";
       div.textContent = `${p.name} — ${p.price} ₽`;
-      div.onclick = () => addProductToCart(p);
+      div.onclick = () => generateBarcodeFor(p);
       list.appendChild(div);
     });
   }
 
   function closeCatalog() {
-    document.getElementById("product-catalog").style.display = "none";
+    document.getElementById("catalog-screen").style.display = "none";
   }
 
-  function generateEAN13(name, isBag = false) {
-    if (isBag) return BAG_BARCODE;
-    // Генерируем уникальный 12-значный код на основе времени и имени
-    const now = Date.now().toString().slice(-9);
-    const nameHash = name.split('').reduce((a, b) => ((a << 5) - a + b.charCodeAt(0)) | 0, 0).toString().replace('-', '').slice(0,3);
-    let code = (now + nameHash).padEnd(12, '0').slice(0,12);
-    // Вычисляем контрольную цифру
-    let sum = 0;
-    for (let i = 0; i < 12; i++) {
-      sum += parseInt(code[i]) * (i % 2 === 0 ? 1 : 3);
-    }
-    const check = (10 - (sum % 10)) % 10;
-    return code + check;
-  }
-
-  function addProductToCart(product) {
+  function generateBarcodeFor(product) {
+    let barcode;
     const isBag = product.name === "Пакет";
-    const barcode = generateEAN13(product.name, isBag);
-    const item = { ...product, barcode, quantity: 1 };
-    cart.push(item);
-    updateCart();
-    closeCatalog();
+    if (isBag) {
+      barcode = BAG_BARCODE;
+    } else {
+      const now = Date.now().toString().slice(-9);
+      const nameHash = product.name.split('').reduce((a, b) => ((a << 5) - a + b.charCodeAt(0)) | 0, 0).toString().replace('-', '').slice(0,3);
+      let code12 = (now + nameHash).padEnd(12, '0').slice(0,12);
+      let sum = 0;
+      for (let i = 0; i < 12; i++) {
+        sum += parseInt(code12[i]) * (i % 2 === 0 ? 1 : 3);
+      }
+      const check = (10 - (sum % 10)) % 10;
+      barcode = code12 + check;
+      activeBarcodes[barcode] = product;
+    }
 
-    // Автоматически добавить в корзину при "сканировании"
-    console.log(`Сканирован штрихкод: ${barcode} → добавлено в корзину`);
+    document.getElementById("barcode-product-name").textContent = product.name;
+    document.getElementById("barcode-number").textContent = barcode;
+    JsBarcode("#barcode-svg", barcode, {
+      format: "EAN13",
+      lineColor: "#000",
+      height: 60,
+      fontSize: 16,
+      displayValue: true,
+      margin: 10
+    });
+
+    document.getElementById("catalog-screen").style.display = "none";
+    document.getElementById("barcode-screen").style.display = "flex";
+  }
+
+  function backToCatalog() {
+    document.getElementById("barcode-screen").style.display = "none";
+    document.getElementById("catalog-screen").style.display = "flex";
   }
 
   function updateCart() {
-    const cartEl = document.getElementById("cart-items");
-    cartEl.innerHTML = "";
+    const el = document.getElementById("cart-items");
+    el.innerHTML = "";
     let total = 0;
-    cart.forEach(item => {
+    cart.forEach((item, idx) => {
       const div = document.createElement("div");
       div.className = "cart-item";
-      div.innerHTML = `
-        ${item.name} × ${item.quantity} — ${item.price} ₽
-        <button class="btn btn-danger" onclick="removeFromCart(${item.id})">Удалить</button>
-      `;
-      cartEl.appendChild(div);
-      total += item.price * item.quantity;
+      div.innerHTML = `${item.name} — ${item.price} ₽ <button class="btn-danger" onclick="removeItem(${idx})">✕</button>`;
+      el.appendChild(div);
+      total += item.price;
     });
     document.getElementById("total").textContent = total;
     updateBonusDisplay();
   }
 
-  function removeFromCart(id) {
-    cart = cart.filter(item => item.id !== id);
+  function removeItem(index) {
+    cart.splice(index, 1);
     updateCart();
   }
 
   function openLoyalty() {
-    document.getElementById("loyalty-form").style.display = "block";
-    document.getElementById("loyalty-actions").innerHTML = `
-      <button class="btn btn-primary" onclick="checkLoyalty()">Проверить карту</button>
-      <button class="btn btn-danger" onclick="document.getElementById('loyalty-form').style.display='none'">Отмена</button>
-    `;
+    document.getElementById("loyalty-form").style.display = "flex";
+    document.getElementById("loyalty-actions").innerHTML = `<button onclick="checkLoyalty()">Проверить</button>`;
   }
 
   function checkLoyalty() {
     const phone = document.getElementById("phone-input").value.replace(/\D/g, '');
-    if (phone.length !== 11 || !phone.startsWith('7')) {
-      alert("Введите корректный номер телефона (79991234567)");
-      return;
-    }
-
-    db.ref('loyalty/' + phone).once('value').then(snapshot => {
-      if (snapshot.exists()) {
-        loyaltyCard = snapshot.val();
+    if (phone.length !== 11 || !phone.startsWith('7')) return alert("Формат: 79991234567");
+    db.ref('loyalty/' + phone).once('value').then(snap => {
+      if (snap.exists()) {
+        loyaltyCard = snap.val();
         favoriteProduct = loyaltyCard.favorite;
-        alert(`Карта найдена! Любимый продукт: ${favoriteProduct}`);
+        alert("Карта найдена! Любимый продукт: " + favoriteProduct);
         document.getElementById("loyalty-form").style.display = "none";
       } else {
         document.getElementById("loyalty-actions").innerHTML = `
-          <input type="text" id="fio-input" placeholder="ФИО полностью" style="width:100%; padding:10px; margin:10px 0;" />
-          <select id="fav-select" style="width:100%; padding:10px; margin:10px 0;">
-            ${products.filter(p => p.name !== "Пакет").map(p => `<option value="${p.name}">${p.name}</option>`).join('')}
-          </select>
-          <button class="btn btn-success" onclick="registerLoyalty('${phone}')">Оформить карту</button>
-          <button class="btn btn-danger" onclick="document.getElementById('loyalty-form').style.display='none'">Отмена</button>
+          <input type="text" id="fio-input" placeholder="ФИО" />
+          <select id="fav-select">${products.filter(p=>p.name!=="Пакет").map(p=>`<option>${p.name}</option>`).join('')}</select>
+          <button class="btn-success" onclick="registerLoyalty('${phone}')">Оформить карту</button>
         `;
       }
     });
@@ -672,41 +717,32 @@
   function registerLoyalty(phone) {
     const fio = document.getElementById("fio-input").value.trim();
     const fav = document.getElementById("fav-select").value;
-    if (!fio || !fav) {
-      alert("Заполните все поля");
-      return;
-    }
-    db.ref('loyalty/' + phone).set({
-      phone: phone,
-      fio: fio,
-      favorite: fav,
-      bonus: 0
-    }).then(() => {
+    if (!fio || !fav) return alert("Заполните все поля");
+    db.ref('loyalty/' + phone).set({ phone, fio, favorite: fav, bonus: 0 }).then(() => {
       loyaltyCard = { phone, fio, favorite: fav, bonus: 0 };
       favoriteProduct = fav;
-      alert("Карта успешно оформлена!");
+      alert("Карта оформлена!");
       document.getElementById("loyalty-form").style.display = "none";
     });
   }
 
   function updateBonusDisplay() {
-    const total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
-    let bonusEarn = 0;
+    let bonus = 0;
     cart.forEach(item => {
       const rate = (item.name === favoriteProduct) ? 0.05 : 0.02;
-      bonusEarn += Math.floor(item.price * item.quantity * rate);
+      bonus += Math.floor(item.price * rate);
     });
-    document.getElementById("bonus-display").textContent = bonusEarn;
+    document.getElementById("bonus-display").textContent = bonus;
   }
 
   function openPayment() {
     const total = parseFloat(document.getElementById("total").textContent);
-    document.getElementById("pay-amount").textContent = total;
     const maxBonus = parseInt(document.getElementById("bonus-display").textContent);
+    document.getElementById("pay-amount").textContent = total;
     document.getElementById("max-bonus").textContent = maxBonus;
     document.getElementById("use-bonus").max = maxBonus;
     document.getElementById("use-bonus").value = Math.min(maxBonus, total);
-    document.getElementById("payment-screen").style.display = "block";
+    document.getElementById("payment-screen").style.display = "flex";
   }
 
   function closePayment() {
@@ -717,26 +753,23 @@
     const total = parseFloat(document.getElementById("pay-amount").textContent);
     const useBonus = parseInt(document.getElementById("use-bonus").value) || 0;
     const final = total - useBonus;
-    const paid = prompt(`Сумма к оплате: ${final} ₽\nВведите сумму от покупателя:`);
+    const paid = prompt(`К оплате: ${final} ₽\nСколько внесено?`);
     if (paid === null) return;
     const cash = parseFloat(paid);
-    if (isNaN(cash) || cash < final) {
-      alert("Недостаточно средств!");
-      return;
-    }
+    if (isNaN(cash) || cash < final) return alert("Недостаточно!");
     const change = cash - final;
     generateReceipt(final, useBonus, "Наличные", change);
-    savePurchaseToFirebase(final, useBonus, "cash");
+    savePurchase(final, useBonus, "cash");
     resetCart();
   }
 
   function payCard() {
-    if (!confirm("Подтвердите оплату картой на сумму: " + document.getElementById("pay-amount").textContent + " ₽")) return;
-    const useBonus = parseInt(document.getElementById("use-bonus").value) || 0;
+    if (!confirm("Подтвердить оплату картой?")) return;
     const total = parseFloat(document.getElementById("pay-amount").textContent);
+    const useBonus = parseInt(document.getElementById("use-bonus").value) || 0;
     const final = total - useBonus;
     generateReceipt(final, useBonus, "Карта");
-    savePurchaseToFirebase(final, useBonus, "card");
+    savePurchase(final, useBonus, "card");
     resetCart();
   }
 
@@ -744,98 +777,63 @@
     const total = parseFloat(document.getElementById("pay-amount").textContent);
     const useBonus = parseInt(document.getElementById("use-bonus").value) || 0;
     const final = total - useBonus;
-    const url = `https://renessans-bank.github.io/oplata/?amount=${final}`;
     document.getElementById("qrcode").innerHTML = "";
     new QRCode(document.getElementById("qrcode"), {
-      text: url,
-      width: 200,
-      height: 200
+      text: `https://renessans-bank.github.io/oplata/?amount=${final}`,
+      width: 180, height: 180
     });
-    alert("Покажите QR-код покупателю для оплаты");
-    // В реальном приложении здесь был бы вебхук на оплату
+    alert("Покажите QR покупателю");
     setTimeout(() => {
       generateReceipt(final, useBonus, "QR");
-      savePurchaseToFirebase(final, useBonus, "qr");
+      savePurchase(final, useBonus, "qr");
       resetCart();
-    }, 5000); // имитация оплаты
+    }, 4000);
   }
 
-  function generateReceipt(finalSum, usedBonus, method, change = 0) {
+  function generateReceipt(sum, bonus, method, change = 0) {
     const now = new Date().toLocaleString("ru-RU");
-    let receipt = `          ООО «Пятёрка»\n`;
-    receipt += `ИНН 940953867509\n`;
-    receipt += `Кассир: Василькова О.Н.\n`;
-    receipt += `Дата: ${now}\n`;
-    receipt += `--------------------------\n`;
-    cart.forEach(item => {
-      receipt += `${item.name}\n`;
-      receipt += `      ${item.price} ₽ x${item.quantity}\n`;
-    });
-    receipt += `--------------------------\n`;
-    receipt += `Итого: ${finalSum + usedBonus} ₽\n`;
-    if (usedBonus > 0) receipt += `Бонусы: -${usedBonus} ₽\n`;
-    receipt += `К оплате: ${finalSum} ₽\n`;
-    receipt += `Оплата: ${method}\n`;
-    if (change > 0) receipt += `Сдача: ${change} ₽\n`;
-    receipt += `--------------------------\n`;
-    receipt += `Спасибо за покупку!\n`;
-
-    document.getElementById("receipt-content").textContent = receipt;
+    let txt = `          ООО «Пятёрка»\nИНН 940953867509\nКассир: Василькова О.Н.\nДата: ${now}\n`;
+    txt += "—" .repeat(25) + "\n";
+    cart.forEach(i => txt += `${i.name}\n       ${i.price} ₽\n`);
+    txt += "—" .repeat(25) + "\n";
+    txt += `Итого: ${sum + bonus} ₽\n`;
+    if (bonus) txt += `Бонусы: -${bonus} ₽\n`;
+    txt += `К оплате: ${sum} ₽\nОплата: ${method}\n`;
+    if (change) txt += `Сдача: ${change} ₽\n`;
+    txt += "—" .repeat(25) + "\nСпасибо за покупку!";
+    document.getElementById("receipt-content").textContent = txt;
     document.getElementById("payment-screen").style.display = "none";
-    document.getElementById("receipt-screen").style.display = "block";
+    document.getElementById("receipt-screen").style.display = "flex";
   }
 
-  function savePurchaseToFirebase(sum, bonus, method) {
-    const purchase = {
+  function savePurchase(sum, bonus, method) {
+    db.ref('purchases').push({
       timestamp: firebase.database.ServerValue.TIMESTAMP,
       items: cart,
       total: sum + bonus,
       paid: sum,
       bonusUsed: bonus,
-      method: method,
+      method,
       cashier: "Василькова О.Н."
-    };
-    db.ref('purchases').push(purchase);
-
-    // Обновить бонусы в карте
-    if (loyaltyCard && bonus > 0) {
-      const earned = parseInt(document.getElementById("bonus-display").textContent);
-      db.ref('loyalty/' + loyaltyCard.phone).update({ bonus: (loyaltyCard.bonus || 0) + earned });
-    }
+    });
   }
 
-  function printReceipt() {
-    window.print();
-  }
-
+  function printReceipt() { window.print(); }
   function backToCashier() {
     document.getElementById("receipt-screen").style.display = "none";
     document.getElementById("cashier-screen").style.display = "flex";
+    setupScanner();
   }
+  function resetCart() { cart = []; updateCart(); }
+  function resetSession() { if (confirm("Сбросить смену?")) resetCart(); }
 
-  function resetCart() {
-    cart = [];
-    updateCart();
-  }
-
-  function resetSession() {
-    if (confirm("Сбросить смену?")) {
-      cart = [];
-      loyaltyCard = null;
-      favoriteProduct = null;
-      updateCart();
-    }
-  }
-
-  // === Горячие клавиши ===
-  document.addEventListener('keydown', (e) => {
+  document.addEventListener('keydown', e => {
     if (e.key === 'F2' && document.getElementById("cashier-screen").style.display === "flex") {
       e.preventDefault();
       showCatalog();
     }
   });
 
-  // === Старт ===
   document.getElementById("login-screen").style.display = "flex";
 </script>
 
