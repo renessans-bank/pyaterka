@@ -12,7 +12,10 @@
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     body { background: #f8f9fa; color: #333; }
     .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; flex-direction: column; padding: 20px; overflow: auto; }
+
     #login-screen { display: flex; background: #1e3a8a; color: white; justify-content: center; align-items: center; flex-direction: column; }
+    #barcode-screen { background: #e0e0e0 !important; } /* СЕРЫЙ ФОН */
+
     input, button, select { padding: 12px; margin: 8px 0; font-size: 16px; border-radius: 6px; border: 1px solid #ccc; }
     button { cursor: pointer; background: #3b82f6; color: white; border: none; }
     button:hover { opacity: 0.9; }
@@ -22,12 +25,54 @@
     .cart-item, .product-item { padding: 14px; margin: 8px 0; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .product-item { cursor: pointer; }
     .product-item:hover { background: #f0f9ff; }
-    #barcode-preview { text-align: center; margin: 30px 0; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-    svg { max-width: 100%; height: auto; }
+
+    #barcode-preview {
+      text-align: center;
+      margin: 30px auto;
+      padding: 25px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+      max-width: 500px;
+      border: 1px solid #ccc;
+    }
+    #barcode-number {
+      font-family: 'Courier New', monospace;
+      font-size: 18px;
+      margin-top: 15px;
+      color: #000;
+      letter-spacing: 2px;
+    }
+
+    #barcode-input {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 320px;
+      text-align: center;
+      font-size: 18px;
+      padding: 12px;
+      border: 2px solid #3b82f6;
+      border-radius: 8px;
+      background: white;
+      z-index: 1000;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      display: none;
+    }
+
     @media print {
-      .screen button, .screen input { display: none !important; }
-      #barcode-preview { position: static; transform: none; box-shadow: none; }
-      body { background: white; }
+      body * { display: none !important; }
+      #barcode-preview, #barcode-svg, #barcode-number {
+        display: block !important;
+        color: black !important;
+        position: static !important;
+        transform: none !important;
+        box-shadow: none !important;
+        border: none !important;
+        padding: 20px;
+        max-width: 100% !important;
+      }
     }
   </style>
 </head>
@@ -63,13 +108,13 @@
   <div id="product-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;"></div>
 </div>
 
-<!-- Штрихкод -->
+<!-- Генерация штрихкода — СЕРЫЙ ФОН -->
 <div id="barcode-screen" class="screen">
   <h2>🖨️ Штрихкод сгенерирован</h2>
   <p id="barcode-product-name" style="font-size: 18px; margin: 10px 0;"></p>
   <div id="barcode-preview">
     <svg id="barcode-svg"></svg>
-    <p id="barcode-number" style="font-family: monospace; font-size: 16px; margin-top: 10px;"></p>
+    <p id="barcode-number"></p>
   </div>
   <button class="btn-warning" onclick="window.print()">Печать штрихкода</button>
   <button onclick="backToCatalog()">← Выбрать другой товар</button>
@@ -103,22 +148,15 @@
   <button class="btn-success" onclick="backToCashier()">Новая покупка</button>
 </div>
 
-<!-- Скрытый ввод для сканера / ручного ввода -->
-<input id="barcode-input" 
-       style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 300px; text-align: center; font-size: 18px; padding: 10px;"
-       maxlength="13" 
-       placeholder="Введите или отсканируйте 13-значный штрихкод"
-       autocomplete="off" />
+<input id="barcode-input" maxlength="13" placeholder="Введите 13 цифр штрихкода" autocomplete="off" />
 
 <script>
-  // === Firebase ===
   const firebaseConfig = {
     databaseURL: "https://renessans-bank-3df94-default-rtdb.europe-west1.firebasedatabase.app/"
   };
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  // === Глобальные переменные ===
   let cart = [];
   let loyaltyCard = null;
   let favoriteProduct = null;
@@ -126,64 +164,108 @@
   const BAG_BARCODE = "2000000000006";
   const activeBarcodes = {};
 
-  // === 250+ товаров ===
-  const baseProducts = [
+  // === РОВНО 60 УНИКАЛЬНЫХ ТОВАРОВ (БЕЗ ПОВТОРОВ) ===
+  const products = [
     { name: "Молоко 1л", price: 89 },
     { name: "Хлеб белый", price: 45 },
     { name: "Яйца 10 шт", price: 85 },
     { name: "Сыр 200г", price: 199 },
+    { name: "Колбаса докторская 300г", price: 249 },
     { name: "Помидоры 1кг", price: 159 },
     { name: "Огурцы 1кг", price: 139 },
     { name: "Картофель 1кг", price: 39 },
     { name: "Лук 1кг", price: 35 },
     { name: "Сахар 1кг", price: 75 },
     { name: "Мука 1кг", price: 65 },
+    { name: "Макароны 400г", price: 59 },
+    { name: "Рис 1кг", price: 119 },
+    { name: "Чай черный 100п", price: 299 },
+    { name: "Кофе молотый 200г", price: 399 },
+    { name: "Сок яблочный 1л", price: 129 },
+    { name: "Вода 1.5л", price: 49 },
+    { name: "Пиво 0.5л", price: 89 },
+    { name: "Шампунь 400мл", price: 249 },
+    { name: "Зубная паста", price: 129 },
+    { name: "Туалетная бумага 12р", price: 199 },
+    { name: "Стиральный порошок 3кг", price: 499 },
+    { name: "Мыло хозяйственное", price: 45 },
+    { name: "Батончики 3шт", price: 99 },
+    { name: "Чипсы 150г", price: 89 },
+    { name: "Шоколадка", price: 79 },
+    { name: "Печенье 250г", price: 119 },
+    { name: "Йогурт 150г", price: 49 },
+    { name: "Творог 500г", price: 159 },
+    { name: "Сметана 200г", price: 79 },
+    { name: "Масло сливочное 200г", price: 189 },
+    { name: "Майонез 400г", price: 129 },
+    { name: "Кетчуп 300г", price: 99 },
+    { name: "Гречка 1кг", price: 89 },
+    { name: "Перец черный молотый", price: 69 },
+    { name: "Соль 1кг", price: 25 },
+    { name: "Уксус 9% 500мл", price: 45 },
+    { name: "Газировка 2л", price: 99 },
+    { name: "Энергетик 0.45л", price: 129 },
+    { name: "Консервы рыбные", price: 159 },
+    { name: "Консервы мясные", price: 179 },
+    { name: "Круассан", price: 59 },
+    { name: "Булочка с маком", price: 39 },
+    { name: "Сырок глазированный", price: 29 },
+    { name: "Мороженое 100г", price: 69 },
+    { name: "Салат оливье 400г", price: 249 },
+    { name: "Пельмени 1кг", price: 349 },
+    { name: "Вареники 800г", price: 229 },
+    { name: "Сосиски 400г", price: 199 },
+    { name: "Курица охлажденная 1кг", price: 249 },
+    { name: "Говядина 1кг", price: 699 },
+    { name: "Свинина 1кг", price: 549 },
+    { name: "Рыба мороженая 1кг", price: 399 },
+    { name: "Креветки 300г", price: 599 },
+    { name: "Масло подсолнечное 1л", price: 139 },
+    { name: "Оливковое масло 500мл", price: 499 },
+    { name: "Мед 500г", price: 399 },
+    { name: "Варенье 400г", price: 199 },
+    { name: "Кофе в зернах 250г", price: 599 },
+    { name: "Какао порошок 200г", price: 149 },
     { name: "Пакет", price: 5 }
-  ];
-  const products = [];
-  for (let i = 0; i < 250; i++) {
-    const p = baseProducts[i % baseProducts.length];
-    products.push({ ...p, id: i + 1 });
-  }
+  ].map((p, i) => ({ ...p, id: i + 1 })); // 60 уникальных товаров
 
-  // === Вход ===
+  // === Функции ===
   function login() {
     if (document.getElementById("password-input").value === CASHIER_PASSWORD) {
       document.getElementById("login-screen").style.display = "none";
-      document.getElementById("cashier-screen").style.display = "flex";
-      setupBarcodeInput();
-      updateCart();
+      showCashier();
     } else {
       alert("Неверный пароль!");
     }
   }
 
-  // === Автоматический ввод по 13 цифрам ===
-  function setupBarcodeInput() {
-    const input = document.getElementById("barcode-input");
-    input.value = "";
-    input.focus();
-
-    input.addEventListener("input", () => {
-      const val = input.value.trim();
-      if (val.length === 13 && /^\d{13}$/.test(val)) {
-        handleScannedBarcode(val);
-        input.value = ""; // очищаем после обработки
-      } else if (val.length > 13) {
-        input.value = val.slice(0, 13); // ограничиваем 13 символами
-      }
-    });
+  function showCashier() {
+    document.getElementById("cashier-screen").style.display = "flex";
+    document.getElementById("barcode-input").style.display = "block";
+    updateCart();
   }
+
+  function hideBarcodeInput() {
+    document.getElementById("barcode-input").style.display = "none";
+  }
+
+  document.getElementById("barcode-input").addEventListener("input", function () {
+    const val = this.value.trim();
+    if (val.length === 13 && /^\d{13}$/.test(val)) {
+      handleScannedBarcode(val);
+      this.value = "";
+    } else if (val.length > 13) {
+      this.value = val.slice(0, 13);
+    }
+  });
 
   function handleScannedBarcode(barcode) {
     if (barcode === BAG_BARCODE) {
       addToCart({ name: "Пакет", price: 5, barcode: BAG_BARCODE });
       return;
     }
-
     if (activeBarcodes[barcode]) {
       addToCart({ ...activeBarcodes[barcode], barcode });
-      delete activeBarcodes[barcode]; // одноразовый
     } else {
       alert("Штрихкод не найден: " + barcode);
     }
@@ -194,8 +276,8 @@
     updateCart();
   }
 
-  // === F2: Каталог → Генерация ===
   function showCatalog() {
+    hideBarcodeInput();
     document.getElementById("catalog-screen").style.display = "flex";
     const list = document.getElementById("product-list");
     list.innerHTML = "";
@@ -210,12 +292,12 @@
 
   function closeCatalog() {
     document.getElementById("catalog-screen").style.display = "none";
+    showCashier();
   }
 
   function generateBarcodeFor(product) {
     let barcode;
     const isBag = product.name === "Пакет";
-
     if (isBag) {
       barcode = BAG_BARCODE;
     } else {
@@ -251,7 +333,6 @@
     document.getElementById("catalog-screen").style.display = "flex";
   }
 
-  // === Корзина ===
   function updateCart() {
     const el = document.getElementById("cart-items");
     el.innerHTML = "";
@@ -272,7 +353,6 @@
     updateCart();
   }
 
-  // === Лояльность и оплата (сокращённо для объёма, но полностью рабочие) ===
   function openLoyalty() {
     document.getElementById("loyalty-form").style.display = "flex";
     document.getElementById("loyalty-actions").innerHTML = `<button onclick="checkLoyalty()">Проверить</button>`;
@@ -330,6 +410,7 @@
 
   function closePayment() {
     document.getElementById("payment-screen").style.display = "none";
+    showCashier();
   }
 
   function payCash() {
@@ -404,14 +485,13 @@
   function printReceipt() { window.print(); }
   function backToCashier() {
     document.getElementById("receipt-screen").style.display = "none";
-    document.getElementById("cashier-screen").style.display = "flex";
-    setupBarcodeInput();
+    showCashier();
   }
   function resetCart() { cart = []; updateCart(); }
   function resetSession() { if (confirm("Сбросить смену?")) resetCart(); }
 
   document.addEventListener('keydown', e => {
-    if (e.key === 'F2' && document.getElementById("cashier-screen").style.display === "flex") {
+    if (e.key === 'F2') {
       e.preventDefault();
       showCatalog();
     }
